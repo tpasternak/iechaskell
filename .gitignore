@@ -1,2 +1,5 @@
 *~
 libiec61850*
+*.o
+*.hi
+main
