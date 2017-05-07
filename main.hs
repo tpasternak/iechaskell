@@ -54,7 +54,7 @@ connect host port = do
   e <- iedConnectionConnect con host 102
   case e of
     0 -> return (Right con)
-    otherwise -> do
+    _ -> do
       c_IedConnection_destroy con
       return (Left e)
 
@@ -62,20 +62,29 @@ destroy s = do
   c_IedConnection_close s
   c_IedConnection_destroy s
 
+linkedListToList :: Ptr SLinkedList -> [String]-> IO [String]
+linkedListToList list acc = do
+  next <- c_LinkedList_getNext list
+  if next == nullPtr then
+    return acc
+  else do
+    val <- c_LinkedList_getData next
+    let valStr = castPtr val
+    str <- peekCString valStr
+    linkedListToList next (str:acc)
+
+logicalDevices :: Ptr SIedConnection -> IO [String]
+logicalDevices con =
+      alloca $ \err -> do
+        linkedList <- c_IedConnection_getLogicalDeviceList con err
+        linkedListToList linkedList []
+
 main = do
   con <- connect "localhost" 102
   case con of
     Left e -> putStr "Failure: " >> print e
     Right con -> do
-      alloca $ \err -> do
-        list <- c_IedConnection_getLogicalDeviceList con err
-        putStr "Device list: "
-        errCode <- peek err
-        next <- c_LinkedList_getNext list
-        val <- c_LinkedList_getData next
-        let valStr = castPtr val
-        str <- peekCString valStr
-        print str
-        print errCode
-      destroy con
+      ldevices <- logicalDevices con
+      putStr "Devices: "
+      print ldevices
       print "Success"
