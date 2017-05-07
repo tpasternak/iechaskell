@@ -8,6 +8,7 @@ import           Foreign.Ptr
 import           Foreign.Storable
 
 data SIedConnection
+data SLinkedList
 
 type IedClientError = CInt
 
@@ -27,6 +28,19 @@ foreign import ccall unsafe "iec61850_client.h IedConnection_close"
 foreign import ccall unsafe
                "iec61850_client.h IedConnection_destroy" c_IedConnection_destroy
                :: Ptr SIedConnection -> IO ()
+
+foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalDeviceList"
+   c_IedConnection_getLogicalDeviceList :: Ptr SIedConnection -> Ptr IedClientError -> IO(Ptr SLinkedList)
+
+foreign import ccall unsafe "iec61850_client.h LinkedList_getData"
+   c_LinkedList_getData :: Ptr SLinkedList -> IO(Ptr ())
+
+foreign import ccall unsafe "iec61850_client.h LinkedList_getNext"
+   c_LinkedList_getNext :: Ptr SLinkedList -> IO(Ptr SLinkedList)
+
+
+-- IedConnection_getLogicalDeviceDirectory(IedConnection self, IedClientError* error,
+--         const char* logicalDeviceName)
 
 iedConnectionConnect :: Ptr SIedConnection -> String -> Int32 -> IO IedClientError
 iedConnectionConnect con host port =
@@ -53,5 +67,15 @@ main = do
   case con of
     Left e -> putStr "Failure: " >> print e
     Right con -> do
+      alloca $ \err -> do
+        list <- c_IedConnection_getLogicalDeviceList con err
+        putStr "Device list: "
+        errCode <- peek err
+        next <- c_LinkedList_getNext list
+        val <- c_LinkedList_getData next
+        let valStr = castPtr val
+        str <- peekCString valStr
+        print str
+        print errCode
       destroy con
       print "Success"
