@@ -1,5 +1,5 @@
 import           Data.Array
-import           Data.ByteString.Char8 hiding (putStr)
+import           Data.ByteString.Char8 hiding (head,putStr)
 import           Data.Int
 import           Foreign.C.String
 import           Foreign.C.Types
@@ -38,9 +38,16 @@ foreign import ccall unsafe "iec61850_client.h LinkedList_getData"
 foreign import ccall unsafe "iec61850_client.h LinkedList_getNext"
    c_LinkedList_getNext :: Ptr SLinkedList -> IO(Ptr SLinkedList)
 
+foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalDeviceDirectory"
+   c_IedConnection_getLogicalDeviceDirectory :: Ptr SIedConnection -> Ptr IedClientError -> CString -> IO(Ptr SLinkedList)
+
 
 -- IedConnection_getLogicalDeviceDirectory(IedConnection self, IedClientError* error,
 --         const char* logicalDeviceName)
+
+--            LinkedList logicalNodes = IedConnection_getLogicalDeviceDirectory(con, &error,
+--                    (char*) device->data);
+
 
 iedConnectionConnect :: Ptr SIedConnection -> String -> Int32 -> IO IedClientError
 iedConnectionConnect con host port =
@@ -62,15 +69,20 @@ destroy s = do
   c_IedConnection_close s
   c_IedConnection_destroy s
 
+linkedList_getString :: Ptr SLinkedList -> IO String
+linkedList_getString list = do
+    val <- c_LinkedList_getData list
+    let valStr = castPtr val
+    str <- peekCString valStr
+    return str
+
 linkedListToList :: Ptr SLinkedList -> [String]-> IO [String]
 linkedListToList list acc = do
   next <- c_LinkedList_getNext list
-  if next == nullPtr then
+  if next == nullPtr then do
     return acc
   else do
-    val <- c_LinkedList_getData next
-    let valStr = castPtr val
-    str <- peekCString valStr
+    str <- linkedList_getString next
     linkedListToList next (str:acc)
 
 logicalDevices :: Ptr SIedConnection -> IO [String]
@@ -78,6 +90,14 @@ logicalDevices con =
       alloca $ \err -> do
         linkedList <- c_IedConnection_getLogicalDeviceList con err
         linkedListToList linkedList []
+
+logicalNodes :: Ptr SIedConnection -> String -> IO [String]
+logicalNodes con device = do
+  alloca $ \err -> do
+    useAsCString (pack device) $ \dev -> do
+      nodes <- c_IedConnection_getLogicalDeviceDirectory con err dev
+      nodesList <- linkedListToList nodes []
+      return nodesList
 
 main = do
   con <- connect "localhost" 102
@@ -87,4 +107,6 @@ main = do
       ldevices <- logicalDevices con
       putStr "Devices: "
       print ldevices
+      nodes <- logicalNodes con (head ldevices)
+      print nodes
       print "Success"
