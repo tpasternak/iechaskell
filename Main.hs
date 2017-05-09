@@ -42,6 +42,9 @@ foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalDeviceDir
 foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalNodeVariables"
    c_IedConnection_getLogicalNodeVariables :: Ptr SIedConnection -> Ptr IedClientError -> CString -> IO(Ptr SLinkedList)
 
+foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalNodeDirectory"
+   c_IedConnection_getLogicalNodeDirectory :: Ptr SIedConnection -> Ptr IedClientError -> CString -> CInt -> IO(Ptr SLinkedList)
+
 foreign import ccall unsafe "iec61850_client.h LinkedList_getData"
    c_LinkedList_getData :: Ptr SLinkedList -> IO(Ptr ())
 
@@ -109,6 +112,15 @@ logicalNodeVariables con lnode =
       ans <- linkedListToList nodes []
       c_LinkedList_destroy nodes
       return ans
+
+logicalNodeDirectory :: ForeignPtr SIedConnection -> String -> AcsiClass ->IO [String]
+logicalNodeDirectory con lnode acsiClass =
+    alloca $ \err ->
+      useAsCString (pack lnode) $ \dev -> do
+        nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalNodeDirectory rawCon err dev (unAcsiClass acsiClass))
+        ans <- linkedListToList nodes []
+        c_LinkedList_destroy nodes
+        return ans
       
 main = do
   con <- connect "localhost" 102
@@ -123,6 +135,8 @@ main = do
       print nodes
       vars <- logicalNodeVariables con "ied1Physical_Measurements/LPHD1"
       print vars
+      dir <- logicalNodeDirectory con "ied1Physical_Measurements/LPHD1" dataObject
+      print dir
 
 --  ["ied1Physical_Measurements","ied1Inverter","ied1Battery"]
 -- Nodes: [["LPHD1","LLN0"],["ZINV1","MMXU1","LPHD1","LLN0"],["ZBTC1","ZBAT1","LPHD1","LLN0"]]
