@@ -103,6 +103,6 @@ main = do
       ldevices <- logicalDevices con
       putStr "Devices: "
       print ldevices
-      nodes <- logicalNodes con (head ldevices)
+      putStr "Nodes: "
+      nodes <- mapM (logicalNodes con) ldevices
       print nodes
-      print "Success"
