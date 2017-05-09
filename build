@@ -1,2 +1,2 @@
 #!/bin/bash
-ghc main.hs -L./libiec61850-1.0.1/build/src/ -liec61850
+ghc --make Main.hs -L./libiec61850-1.0.1/build/src/ -liec61850

@@ -1,3 +1,5 @@
+module Main where
+
 import           Data.Array
 import           Data.ByteString.Char8 hiding (head,putStr)
 import           Data.Int
@@ -7,6 +9,7 @@ import           Foreign.Marshal.Alloc
 import           Foreign.Ptr
 import           Foreign.ForeignPtr
 import           Foreign.Storable
+import           Enums
 
 data SIedConnection
 data SLinkedList
@@ -35,6 +38,9 @@ foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalDeviceLis
 
 foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalDeviceDirectory"
    c_IedConnection_getLogicalDeviceDirectory :: Ptr SIedConnection -> Ptr IedClientError -> CString -> IO(Ptr SLinkedList)
+
+foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalNodeVariables"
+   c_IedConnection_getLogicalNodeVariables :: Ptr SIedConnection -> Ptr IedClientError -> CString -> IO(Ptr SLinkedList)
 
 foreign import ccall unsafe "iec61850_client.h LinkedList_getData"
    c_LinkedList_getData :: Ptr SLinkedList -> IO(Ptr ())
@@ -95,6 +101,15 @@ logicalNodes con device =
       c_LinkedList_destroy nodes
       return ans
 
+logicalNodeVariables :: ForeignPtr SIedConnection -> String -> IO [String]
+logicalNodeVariables con lnode =
+  alloca $ \err ->
+      useAsCString (pack lnode) $ \dev -> do
+      nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
+      ans <- linkedListToList nodes []
+      c_LinkedList_destroy nodes
+      return ans
+      
 main = do
   con <- connect "localhost" 102
   case con of
@@ -106,3 +121,8 @@ main = do
       putStr "Nodes: "
       nodes <- mapM (logicalNodes con) ldevices
       print nodes
+      vars <- logicalNodeVariables con "ied1Physical_Measurements/LPHD1"
+      print vars
+
+--  ["ied1Physical_Measurements","ied1Inverter","ied1Battery"]
+-- Nodes: [["LPHD1","LLN0"],["ZINV1","MMXU1","LPHD1","LLN0"],["ZBTC1","ZBAT1","LPHD1","LLN0"]]

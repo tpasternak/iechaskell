@@ -2,4 +2,5 @@
 libiec61850*
 *.o
 *.hi
-main
+Main
+Enums.hs
