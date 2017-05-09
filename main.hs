@@ -69,20 +69,20 @@ destroy s = do
   c_IedConnection_close s
   c_IedConnection_destroy s
 
-linkedList_getString :: Ptr SLinkedList -> IO String
-linkedList_getString list = do
+linkedListgetString :: Ptr SLinkedList -> IO String
+linkedListgetString list = do
     val <- c_LinkedList_getData list
     let valStr = castPtr val
-    str <- peekCString valStr
-    return str
+    peekCString valStr
+
 
 linkedListToList :: Ptr SLinkedList -> [String]-> IO [String]
 linkedListToList list acc = do
   next <- c_LinkedList_getNext list
-  if next == nullPtr then do
+  if next == nullPtr then
     return acc
   else do
-    str <- linkedList_getString next
+    str <- linkedListgetString next
     linkedListToList next (str:acc)
 
 logicalDevices :: Ptr SIedConnection -> IO [String]
@@ -92,12 +92,11 @@ logicalDevices con =
         linkedListToList linkedList []
 
 logicalNodes :: Ptr SIedConnection -> String -> IO [String]
-logicalNodes con device = do
-  alloca $ \err -> do
+logicalNodes con device =
+  alloca $ \err ->
     useAsCString (pack device) $ \dev -> do
       nodes <- c_IedConnection_getLogicalDeviceDirectory con err dev
-      nodesList <- linkedListToList nodes []
-      return nodesList
+      linkedListToList nodes []
 
 main = do
   con <- connect "localhost" 102
