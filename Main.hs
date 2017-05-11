@@ -10,6 +10,7 @@ import           Foreign.Ptr
 import           Foreign.ForeignPtr
 import           Foreign.Storable
 import           Enums
+import           Control.Exception
 
 data SIedConnection
 data SLinkedList
@@ -54,20 +55,22 @@ foreign import ccall unsafe "iec61850_client.h LinkedList_getNext"
 foreign import ccall unsafe "iec61850_client.h LinkedList_destroy"
    c_LinkedList_destroy :: Ptr SLinkedList -> IO ()
 
-iedConnectionConnect :: Ptr SIedConnection -> String -> Int32 -> IO IedClientError
-iedConnectionConnect con host port =
-  alloca $ \err -> do
-    useAsCString (pack host) $ \str -> c_IedConnection_connect con err str (CInt port)
-    peek err
 
-connect :: String -> Int32 -> IO (Either IedClientError (ForeignPtr SIedConnection))
+
+connect :: String -> Int32 -> IO (ForeignPtr SIedConnection)
 connect host port = do
-  con <- c_IedConnectionCreate
-  con2 <- newForeignPtr c_IedConnection_destroy con
-  e <- iedConnectionConnect con host 102
+  rawCon <- c_IedConnectionCreate
+  con <- newForeignPtr c_IedConnection_destroy rawCon
+  e <- iedConnectionConnect rawCon host 102
   case e of
-    0 -> return (Right con2)
-    _ -> return (Left e)
+    0 -> return con
+    _ -> throwIO (IedConnectionException e)
+  where
+    iedConnectionConnect :: Ptr SIedConnection -> String -> Int32 -> IO IedClientError
+    iedConnectionConnect con host port =
+      alloca $ \err -> do
+        useAsCString (pack host) $ \str -> c_IedConnection_connect con err str (CInt port)
+        peek err
 
 close con = withForeignPtr con c_IedConnection_close
 
@@ -91,52 +94,69 @@ logicalDevices :: ForeignPtr SIedConnection -> IO [String]
 logicalDevices con =
       alloca $ \err -> do
         linkedList <- withForeignPtr con (`c_IedConnection_getLogicalDeviceList` err)
-        ans <- linkedListToList linkedList []
-        c_LinkedList_destroy linkedList
-        return ans
+        errNo <- peek err
+        case errNo of
+          0 -> do
+            ans <- linkedListToList linkedList []
+            c_LinkedList_destroy linkedList
+            return ans
+          _ -> throwIO (IedConnectionException errNo)
 
 logicalNodes :: ForeignPtr SIedConnection -> String -> IO [String]
 logicalNodes con device =
   alloca $ \err ->
     useAsCString (pack device) $ \dev -> do
       nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalDeviceDirectory rawCon err dev)
-      ans <- linkedListToList nodes []
-      c_LinkedList_destroy nodes
-      return ans
+      errNo <- peek err
+      case errNo of
+          0 -> do
+            ans <- linkedListToList nodes []
+            c_LinkedList_destroy nodes
+            return ans
+          _ -> throwIO (IedConnectionException errNo)
 
 logicalNodeVariables :: ForeignPtr SIedConnection -> String -> IO [String]
 logicalNodeVariables con lnode =
   alloca $ \err ->
       useAsCString (pack lnode) $ \dev -> do
       nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
-      ans <- linkedListToList nodes []
-      c_LinkedList_destroy nodes
-      return ans
+      errNo <- peek err
+      case errNo of
+          0 -> do
+            ans <- linkedListToList nodes []
+            c_LinkedList_destroy nodes
+            return ans
+          _ -> throwIO (IedConnectionException errNo)
 
 logicalNodeDirectory :: ForeignPtr SIedConnection -> String -> AcsiClass ->IO [String]
 logicalNodeDirectory con lnode acsiClass =
     alloca $ \err ->
       useAsCString (pack lnode) $ \dev -> do
         nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalNodeDirectory rawCon err dev (unAcsiClass acsiClass))
-        ans <- linkedListToList nodes []
-        c_LinkedList_destroy nodes
-        return ans
-      
+        errorN <- peek err
+        case errorN of
+          0 -> do
+            ans <- linkedListToList nodes []
+            c_LinkedList_destroy nodes
+            return ans
+          _ -> throwIO (IedConnectionException 1)
+
+
+data IedConnectionException = IedConnectionException CInt
+  deriving (Show)
+
+instance Exception IedConnectionException
+
+
 main = do
   con <- connect "localhost" 102
-  case con of
-    Left e -> putStr "Failure: " >> print e
-    Right con -> do
-      ldevices <- logicalDevices con
-      putStr "Devices: "
-      print ldevices
-      putStr "Nodes: "
-      nodes <- mapM (logicalNodes con) ldevices
-      print nodes
-      vars <- logicalNodeVariables con "ied1Physical_Measurements/LPHD1"
-      print vars
-      dir <- logicalNodeDirectory con "ied1Physical_Measurements/LPHD1" dataObject
-      print dir
-
---  ["ied1Physical_Measurements","ied1Inverter","ied1Battery"]
--- Nodes: [["LPHD1","LLN0"],["ZINV1","MMXU1","LPHD1","LLN0"],["ZBTC1","ZBAT1","LPHD1","LLN0"]]
+  ldevices <- logicalDevices con
+  putStr "Devices: "
+  print ldevices
+  putStr "Nodes: "
+  nodes <- mapM (logicalNodes con) ldevices
+  print nodes
+  vars <- logicalNodeVariables con "ied1Physical_Measurements/LPHD1"
+  print vars
+  dir <- logicalNodeDirectory con "ied1Physical_Measurements/LPHD1" dataObject
+  print dir
