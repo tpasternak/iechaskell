@@ -133,13 +133,13 @@ logicalNodeDirectory con lnode acsiClass =
     alloca $ \err ->
       useAsCString (pack lnode) $ \dev -> do
         nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalNodeDirectory rawCon err dev (unAcsiClass acsiClass))
-        errorN <- peek err
-        case errorN of
+        errNo <- peek err
+        case errNo of
           0 -> do
             ans <- linkedListToList nodes []
             c_LinkedList_destroy nodes
             return ans
-          _ -> throwIO (IedConnectionException 1)
+          _ -> throwIO (IedConnectionException errNo)
 
 
 data IedConnectionException = IedConnectionException CInt
