@@ -1,6 +1,3 @@
 *~
 libiec61850*
-*.o
-*.hi
-Main
-Enums.hs
+.stack-work
