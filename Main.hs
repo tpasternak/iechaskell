@@ -1,7 +1,7 @@
 module Main where
 
 import           Data.Array
-import           Data.ByteString.Char8 hiding (head,putStr)
+import           Data.ByteString.Char8 hiding (head,putStr, putStrLn)
 import           Data.Int
 import           Foreign.C.String
 import           Foreign.C.Types
@@ -45,6 +45,9 @@ foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalNodeVaria
 
 foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalNodeDirectory"
    c_IedConnection_getLogicalNodeDirectory :: Ptr SIedConnection -> Ptr IedClientError -> CString -> CInt -> IO(Ptr SLinkedList)
+
+foreign import ccall unsafe "iec61850_client.h IedConnection_getDataDirectory"
+   c_IedConnection_getDataDirectory :: Ptr SIedConnection -> Ptr IedClientError -> CString -> CInt -> IO(Ptr SLinkedList)
 
 foreign import ccall unsafe "iec61850_client.h LinkedList_getData"
    c_LinkedList_getData :: Ptr SLinkedList -> IO(Ptr ())
@@ -141,6 +144,19 @@ logicalNodeDirectory con lnode acsiClass =
             return ans
           _ -> throwIO (IedConnectionException errNo)
 
+dataObjectDirectory :: ForeignPtr SIedConnection -> String -> AcsiClass ->IO [String]
+dataObjectDirectory con lnode acsiClass =
+    alloca $ \err ->
+      useAsCString (pack lnode) $ \dev -> do
+        nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getDataDirectory rawCon err dev (unAcsiClass acsiClass))
+        errNo <- peek err
+        case errNo of
+          0 -> do
+            ans <- linkedListToList nodes []
+            c_LinkedList_destroy nodes
+            return ans
+          _ -> throwIO (IedConnectionException errNo)
+
 
 data IedConnectionException = IedConnectionException CInt
   deriving (Show)
@@ -151,12 +167,12 @@ instance Exception IedConnectionException
 main = do
   con <- connect "localhost" 102
   ldevices <- logicalDevices con
-  putStr "Devices: "
-  print ldevices
-  putStr "Nodes: "
+  putStrLn $ "Devices: " ++ (show ldevices)
   nodes <- mapM (logicalNodes con) ldevices
-  print nodes
+  putStrLn $ "Nodes: " ++ (show nodes)
   vars <- logicalNodeVariables con "ied1Physical_Measurements/LPHD1"
   print vars
   dir <- logicalNodeDirectory con "ied1Physical_Measurements/LPHD1" dataObject
   print dir
+  dobj <- dataObjectDirectory con  "ied1Physical_Measurements/LPHD1.Proxy" dataObject
+  print dobj
