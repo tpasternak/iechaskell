@@ -60,12 +60,9 @@ extra-package-dbs: []
 # 
 # Extra directories used by stack for building
 extra-include-dirs:
-- ./libiec61850-1.0.1/src/iec61850/inc/
-- ./libiec61850-1.0.1/src/common/inc/
-- ./libiec61850-1.0.1/src/hal/inc/
-- ./libiec61850-1.0.1/src/mms/inc/
-- ./libiec61850-1.0.1/src/logging/
+- /usr/local/include/libiec61850
+
 extra-lib-dirs:
-- /home/tomasz/Documents/haskell61850/libiec61850-1.0.1/build/src/ 
+- /usr/local/lib
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
