@@ -48,7 +48,7 @@ foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalNodeDirec
    c_IedConnection_getLogicalNodeDirectory :: Ptr SIedConnection -> Ptr IedClientError -> CString -> CInt -> IO(Ptr SLinkedList)
 
 foreign import ccall unsafe "iec61850_client.h IedConnection_getDataDirectory"
-   c_IedConnection_getDataDirectory :: Ptr SIedConnection -> Ptr IedClientError -> CString -> CInt -> IO(Ptr SLinkedList)
+   c_IedConnection_getDataDirectory :: Ptr SIedConnection -> Ptr IedClientError -> CString -> IO(Ptr SLinkedList)
 
 foreign import ccall unsafe "iec61850_client.h LinkedList_getData"
    c_LinkedList_getData :: Ptr SLinkedList -> IO(Ptr ())
@@ -145,11 +145,11 @@ logicalNodeDirectory con lnode acsiClass =
             return ans
           _ -> throwIO (IedConnectionException errNo)
 
-dataObjectDirectory :: ForeignPtr SIedConnection -> String -> AcsiClass ->IO [String]
-dataObjectDirectory con lnode acsiClass =
+dataObjectDirectory :: ForeignPtr SIedConnection -> String -> IO [String]
+dataObjectDirectory con lnode =
     alloca $ \err ->
       useAsCString (pack lnode) $ \dev -> do
-        nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getDataDirectory rawCon err dev (unAcsiClass acsiClass))
+        nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getDataDirectory rawCon err dev)
         errNo <- peek err
         case errNo of
           0 -> do
