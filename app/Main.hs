@@ -4,7 +4,7 @@ import Iec61850
 import Enums
 import Control.Monad
 
-main = do
+simpleList = do
   con <- connect "localhost" 102
   ldevices <- logicalDevices con
   forM_ ldevices $
@@ -22,3 +22,4 @@ main = do
                 \attribute -> 
                   putStrLn $ attrPath ++ "." ++ attribute
 
+main = simpleList
