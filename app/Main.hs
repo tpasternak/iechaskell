@@ -17,7 +17,7 @@ simpleList = do
           forM_ objects $
             \object -> do
               let attrPath = nodeFull ++ "." ++ object
-              attributes <- dataObjectDirectory con attrPath
+              attributes <- dataObjectDirectoryByFC con attrPath st
               forM_ attributes $
                 \attribute -> 
                   putStrLn $ attrPath ++ "." ++ attribute

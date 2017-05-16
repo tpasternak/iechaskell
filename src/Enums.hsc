@@ -1,6 +1,6 @@
 module Enums
 where
-
+import Prelude hiding (or,all)
 import Foreign.C.Types
 
 #include "iec61850_client.h"
@@ -23,10 +23,10 @@ newtype AcsiClass = AcsiClass { unAcsiClass :: CInt }
 }
 
 newtype FunctionalConstraint = FunctionalConstraint { unFunctionalConstraint :: CInt }
-  deriving (Show,Eq)
+  deriving (Eq)
 
 #{enum FunctionalConstraint,FunctionalConstraint
-, fc = IEC61850_FC_ST
+, st = IEC61850_FC_ST
 , mx = IEC61850_FC_MX
 , sp = IEC61850_FC_SP
 , sv = IEC61850_FC_SV
@@ -47,3 +47,26 @@ newtype FunctionalConstraint = FunctionalConstraint { unFunctionalConstraint :: 
 , all = IEC61850_FC_ALL
 , none = IEC61850_FC_NONE
  }
+
+instance Show FunctionalConstraint where
+  show x
+      | x == st = "ST"
+      | x == mx = "MX"
+      | x == sp = "SP"
+      | x == sv = "SV"
+      | x == cf = "CF"
+      | x == cd = "DC"
+      | x == sg = "SG"
+      | x == se = "SE"
+      | x == sr = "SR"
+      | x == or = "OR"
+      | x == bl = "BL"
+      | x == ex = "EX"
+      | x == co = "CO"
+      | x == us = "US"
+      | x == ms = "MS"
+      | x == rp = "RP"
+      | x == br = "BR"
+      | x == lg = "LG"
+      | x == all = "ALL"
+      | x == none = "NONE"

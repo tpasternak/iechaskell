@@ -1,5 +1,6 @@
 module Iec61850 (logicalNodeDirectory, SIedConnection, connect, logicalDevices,
-                 logicalNodes, logicalNodeVariables, dataObjectDirectory) where
+                 logicalNodes, logicalNodeVariables, dataObjectDirectory,
+                 dataObjectDirectoryByFC) where
 
 import           Data.Array
 import           Data.ByteString.Char8 hiding (head,putStr, putStrLn)
@@ -49,6 +50,9 @@ foreign import ccall unsafe "iec61850_client.h IedConnection_getLogicalNodeDirec
 
 foreign import ccall unsafe "iec61850_client.h IedConnection_getDataDirectory"
    c_IedConnection_getDataDirectory :: Ptr SIedConnection -> Ptr IedClientError -> CString -> IO(Ptr SLinkedList)
+
+foreign import ccall unsafe "iec61850_client.h IedConnection_getDataDirectoryByFC"
+   c_IedConnection_getDataDirectoryByFC :: Ptr SIedConnection -> Ptr IedClientError -> CString -> CInt -> IO(Ptr SLinkedList)
 
 foreign import ccall unsafe "iec61850_client.h LinkedList_getData"
    c_LinkedList_getData :: Ptr SLinkedList -> IO(Ptr ())
@@ -150,6 +154,19 @@ dataObjectDirectory con lnode =
     alloca $ \err ->
       useAsCString (pack lnode) $ \dev -> do
         nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getDataDirectory rawCon err dev)
+        errNo <- peek err
+        case errNo of
+          0 -> do
+            ans <- linkedListToList nodes []
+            c_LinkedList_destroy nodes
+            return ans
+          _ -> throwIO (IedConnectionException errNo)
+
+dataObjectDirectoryByFC :: ForeignPtr SIedConnection -> String -> FunctionalConstraint ->IO [String]
+dataObjectDirectoryByFC con lnode fc=
+    alloca $ \err ->
+      useAsCString (pack lnode) $ \dev -> do
+        nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getDataDirectoryByFC rawCon err dev (unFunctionalConstraint fc))
         errNo <- peek err
         case errNo of
           0 -> do
