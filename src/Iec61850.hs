@@ -1,6 +1,6 @@
 module Iec61850 (logicalNodeDirectory, SIedConnection, connect, logicalDevices,
                  logicalNodes, logicalNodeVariables, dataObjectDirectory,
-                 dataObjectDirectoryByFC) where
+                 dataObjectDirectoryByFC, mmsType) where
 
 import           Data.Array
 import           Data.ByteString.Char8 hiding (head,putStr, putStrLn)
@@ -16,6 +16,7 @@ import           Control.Exception
 
 data SIedConnection
 data SLinkedList
+data SMmsVariableSpecification
 
 type IedClientError = CInt
 
@@ -63,7 +64,22 @@ foreign import ccall unsafe "iec61850_client.h LinkedList_getNext"
 foreign import ccall unsafe "iec61850_client.h LinkedList_destroy"
    c_LinkedList_destroy :: Ptr SLinkedList -> IO ()
 
+foreign import ccall unsafe "iec61850_client.h IedConnection_getVariableSpecification"
+  c_IedConnection_getVariableSpecification :: Ptr SIedConnection -> Ptr IedClientError -> CString -> CInt -> IO(Ptr SMmsVariableSpecification)
 
+foreign import ccall unsafe "iec61850_client.h MmsVariableSpecification_getType"
+  c_MmsVariableSpecification_getType :: Ptr SMmsVariableSpecification -> IO (CInt)
+
+mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsType)
+mmsType con path fc = do
+  alloca $ \err ->
+    useAsCString (pack path) $ \p -> do
+      mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (unFunctionalConstraint fc))
+      errNo <- peek err
+      mType <- c_MmsVariableSpecification_getType mmsSpec
+      case errNo of
+          0 -> return $ MmsType mType
+          _ -> throwIO (IedConnectionException errNo)
 
 connect :: String -> Int32 -> IO (ForeignPtr SIedConnection)
 connect host port = do

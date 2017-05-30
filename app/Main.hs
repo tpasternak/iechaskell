@@ -21,5 +21,8 @@ simpleList = do
               forM_ attributes $
                 \attribute -> 
                   putStrLn $ attrPath ++ "." ++ attribute
-
+  mt <- mmsType con "ied1Inverter/ZINV1.OutVarSet.setMag" sp
+  print mt
+  mt2 <- mmsType con "ied1Battery/LLN0.Health.t" st
+  print mt2
 main = simpleList

@@ -31,7 +31,7 @@ newtype FunctionalConstraint = FunctionalConstraint { unFunctionalConstraint :: 
 , sp = IEC61850_FC_SP
 , sv = IEC61850_FC_SV
 , cf = IEC61850_FC_CF
-, cd = IEC61850_FC_DC
+, dc = IEC61850_FC_DC
 , sg = IEC61850_FC_SG
 , se = IEC61850_FC_SE
 , sr = IEC61850_FC_SR
@@ -55,7 +55,7 @@ instance Show FunctionalConstraint where
       | x == sp = "SP"
       | x == sv = "SV"
       | x == cf = "CF"
-      | x == cd = "DC"
+      | x == dc = "DC"
       | x == sg = "SG"
       | x == se = "SE"
       | x == sr = "SR"
@@ -70,3 +70,27 @@ instance Show FunctionalConstraint where
       | x == lg = "LG"
       | x == all = "ALL"
       | x == none = "NONE"
+
+
+newtype MmsType = MmsType { unMmsType :: CInt }
+  deriving (Show,Eq)
+
+#{enum MmsType,MmsType
+,   mms_array = MMS_ARRAY 	
+,   mms_structure = MMS_STRUCTURE 	
+,   mms_boolean = MMS_BOOLEAN 	
+,   mms_bit_string = MMS_BIT_STRING 	
+,   mms_integer = MMS_INTEGER 	
+,   mms_unsigned = MMS_UNSIGNED 	
+,   mms_float = MMS_FLOAT 	
+,   mms_octet_string = MMS_OCTET_STRING 	
+,   mms_visible_string = MMS_VISIBLE_STRING 	
+,   mms_generalized_time = MMS_GENERALIZED_TIME 	
+,   mms_binary_time = MMS_BINARY_TIME 	
+,   mms_bcd = MMS_BCD 	
+,   mms_obj_id = MMS_OBJ_ID 	
+,   mms_string = MMS_STRING 	
+,   mms_utc_time = MMS_UTC_TIME 	
+,   mms_data_access_error = MMS_DATA_ACCESS_ERROR 	
+ }
+
