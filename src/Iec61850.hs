@@ -87,7 +87,7 @@ mmsSpec con path fc = do
 mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsType)
 mmsType con path fc = do
       fMmsSpec <- mmsSpec con path fc
-      MmsType <$> withForeignPtr fMmsSpec (\spec -> c_MmsVariableSpecification_getType spec)
+      MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType 
 
 connect :: String -> Int32 -> IO (ForeignPtr SIedConnection)
 connect host port = do
