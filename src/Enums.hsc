@@ -112,3 +112,20 @@ instance Show MmsType where
    | x == mms_string = "MMS_STRING"
    | x == mms_utc_time = "MMS_UTC_TIME"
    | x == mms_data_access_error = "MMS_DATA_ACCESS_ERROR"
+
+data MmsVar =
+  Array [MmsVar]
+  | Structure [MmsVar]
+  | Boolean Int
+  | BitString 
+  | Integer Int
+  | Unsigned Int
+  | Float 
+  | MmsOctetString 
+  | MmsVisibleString String
+  | MmsGeneralizedTime
+  | MmsBinaryTime
+  | MmsBcd
+  | MmsObjId
+  | MmsString String
+  | MmsUtcTime 

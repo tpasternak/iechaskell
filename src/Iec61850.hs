@@ -73,6 +73,11 @@ foreign import ccall unsafe "iec61850_client.h MmsVariableSpecification_getType"
 foreign import ccall unsafe "iec61850_client.h &MmsVariableSpecification_destroy"
   c_MmsVariableSpecification_destroy :: FunPtr (Ptr SMmsVariableSpecification -> IO ())
 
+data MmsVarSpec = MmsVarSpec {
+                              varName :: String,
+                              varType :: MmsType
+                             } deriving (Show)
+
 mmsSpec :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
 mmsSpec con path fc = do
   alloca $ \err ->
@@ -87,7 +92,7 @@ mmsSpec con path fc = do
 mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsType)
 mmsType con path fc = do
       fMmsSpec <- mmsSpec con path fc
-      MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType 
+      MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType
 
 connect :: String -> Int32 -> IO (ForeignPtr SIedConnection)
 connect host port = do

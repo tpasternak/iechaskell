@@ -19,10 +19,10 @@ simpleList = do
               let attrPath = nodeFull ++ "." ++ object
               attributes <- dataObjectDirectoryByFC con attrPath st
               forM_ attributes $
-                \attribute -> 
-                  putStrLn $ attrPath ++ "." ++ attribute
-  mt <- mmsType con "ied1Inverter/ZINV1.OutVarSet.setMag" sp
-  print mt
-  mt2 <- mmsType con "ied1Battery/LLN0.Health.t" st
-  print mt2
+                \attribute -> do
+                  let fullPath = attrPath ++ "." ++ attribute
+                  let cleanPath = takeWhile (/= '[') fullPath
+                  type_ <- mmsType con cleanPath st
+                  putStrLn $ fullPath ++ " :: " ++ (show type_)
+
 main = simpleList
