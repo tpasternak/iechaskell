@@ -70,16 +70,24 @@ foreign import ccall unsafe "iec61850_client.h IedConnection_getVariableSpecific
 foreign import ccall unsafe "iec61850_client.h MmsVariableSpecification_getType"
   c_MmsVariableSpecification_getType :: Ptr SMmsVariableSpecification -> IO (CInt)
 
-mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsType)
-mmsType con path fc = do
+foreign import ccall unsafe "iec61850_client.h &MmsVariableSpecification_destroy"
+  c_MmsVariableSpecification_destroy :: FunPtr (Ptr SMmsVariableSpecification -> IO ())
+
+mmsSpec :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
+mmsSpec con path fc = do
   alloca $ \err ->
     useAsCString (pack path) $ \p -> do
       mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (unFunctionalConstraint fc))
+      fMmsSpec <- newForeignPtr c_MmsVariableSpecification_destroy mmsSpec
       errNo <- peek err
-      mType <- c_MmsVariableSpecification_getType mmsSpec
       case errNo of
-          0 -> return $ MmsType mType
+          0 -> return $ fMmsSpec
           _ -> throwIO (IedConnectionException errNo)
+
+mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsType)
+mmsType con path fc = do
+      fMmsSpec <- mmsSpec con path fc
+      MmsType <$> withForeignPtr fMmsSpec (\spec -> c_MmsVariableSpecification_getType spec)
 
 connect :: String -> Int32 -> IO (ForeignPtr SIedConnection)
 connect host port = do
