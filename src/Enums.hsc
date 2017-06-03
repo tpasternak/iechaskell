@@ -129,7 +129,7 @@ data MmsVar =
   | MmsBcd
   | MmsObjId
   | MmsString String
-  | MmsUtcTime
+  | MmsUtcTime Int
   | MmsUnknown
   deriving (Show)
 
@@ -138,3 +138,7 @@ type CBool = #{type bool}
 cFalse, cTrue :: CBool
 cFalse = 0
 cTrue = 1
+
+type CUint64 = #{type uint64_t}
+
+type CUint32 = #{type uint32_t}

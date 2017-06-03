@@ -129,27 +129,40 @@ foreign import ccall unsafe "iec61850_client.h MmsValue_toInt32"
 foreign import ccall unsafe "iec61850_client.h MmsValue_getBoolean"
                c_MmsValue_getBoolean :: Ptr SMmsValue -> IO (CBool)
 
+foreign import ccall unsafe
+               "iec61850_client.h MmsValue_getUtcTimeInMsWithUs"
+               c_MmsValue_getUtcTimeInMsWithUs ::
+               Ptr SMmsValue -> Ptr CUint32 -> IO (CUint64)
+
 foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
                c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
+
+fromCMmsVal mmsVal = do
+  type_ <- withForeignPtr mmsVal c_MmsValue_getType
+  case (MmsType type_) of
+    t
+      | t == mms_integer -> MmsInteger <$> withForeignPtr mmsVal (\mmsV -> c_MmsValue_toInt32 mmsV)
+      | t == mms_boolean -> do
+          cbool <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_getBoolean mmsV)
+          return $ MmsBoolean (cbool /= cFalse)
+      | t == mms_visible_string -> do
+          str <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_toString mmsV)
+          pstr <- peekCString str
+          free str
+          return $ MmsVisibleString pstr
+      | t == mms_utc_time -> do
+          alloca $ \usecPtr -> do
+            msec <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_getUtcTimeInMsWithUs mmsV usecPtr)
+            usec <- peek usecPtr
+            return $ MmsUtcTime $ 1000 * (fromIntegral msec) + (fromIntegral usec)
+    otherwise -> return $ MmsUnknown
 
 readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsVar)
 readVal con daReference fc = do
   alloca $ \err -> useAsCString (pack daReference) $ \p -> do
     mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (unFunctionalConstraint fc))
     safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
-    type_ <- c_MmsValue_getType mmsVal
-    case (MmsType type_) of
-      t
-        | t == mms_integer -> MmsInteger <$> withForeignPtr safeMmsVal (\mmsV -> c_MmsValue_toInt32 mmsV)
-        | t == mms_boolean -> do
-            cbool <- withForeignPtr safeMmsVal (\mmsV -> c_MmsValue_getBoolean mmsV)
-            return $ MmsBoolean (cbool /= cFalse)
-        | t == mms_visible_string -> do
-            str <- withForeignPtr safeMmsVal (\mmsV -> c_MmsValue_toString mmsV)
-            pstr <- peekCString str
-            free str
-            return $ MmsVisibleString pstr
-      otherwise -> return $ MmsUnknown
+    fromCMmsVal safeMmsVal
 
 data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }
   deriving (Show)
