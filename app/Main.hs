@@ -1,10 +1,11 @@
 module Main where
 
-import Iec61850
-import Enums
-import Control.Monad
+import           Control.Monad
+import           Enums
+import           Iec61850
 
 simpleList = do
+  let constraint = st
   con <- connect "localhost" 102
   ldevices <- logicalDevices con
   forM_ ldevices $
@@ -17,12 +18,13 @@ simpleList = do
           forM_ objects $
             \object -> do
               let attrPath = nodeFull ++ "." ++ object
-              attributes <- dataObjectDirectoryByFC con attrPath st
+              attributes <- dataObjectDirectoryByFC con attrPath constraint
               forM_ attributes $
                 \attribute -> do
                   let fullPath = attrPath ++ "." ++ attribute
                   let cleanPath = takeWhile (/= '[') fullPath
-                  type_ <- mmsType con cleanPath st
-                  putStrLn $ fullPath ++ " :: " ++ (show type_)
+                  type_ <- mmsType con cleanPath constraint
+                  val <- readValToString con cleanPath constraint
+                  putStrLn $ fullPath ++ " :: " ++ (show type_) ++ " = " ++ (show val)
 
 main = simpleList

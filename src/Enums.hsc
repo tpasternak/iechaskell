@@ -116,9 +116,9 @@ instance Show MmsType where
 data MmsVar =
   Array [MmsVar]
   | Structure [MmsVar]
-  | Boolean Int
+  | MmsBoolean Bool
   | BitString 
-  | Integer Int
+  | MmsInteger CInt
   | Unsigned Int
   | Float 
   | MmsOctetString 
@@ -128,4 +128,7 @@ data MmsVar =
   | MmsBcd
   | MmsObjId
   | MmsString String
-  | MmsUtcTime 
+  | MmsUtcTime
+  | MmsUnknown
+  deriving (Show)
+
