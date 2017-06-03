@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Iec61850 Enums
+  exposed-modules:     MmsValue Enums IedConnection LinkedList
   build-depends:       base >= 4.7 && < 5
                      , array
                      , bytestring

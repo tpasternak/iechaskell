@@ -1,4 +1,4 @@
-module Iec61850 (
+module IedConnection (
     logicalNodeDirectory,
     SIedConnection,
     connect,
@@ -7,12 +7,11 @@ module Iec61850 (
     logicalNodeVariables,
     dataObjectDirectory,
     dataObjectDirectoryByFC,
-    mmsType,
     readVal,
+    mmsType,
     ) where
 
 import           Control.Exception
-import           Data.Array
 import           Data.ByteString.Char8 hiding (head, putStr, putStrLn)
 import           Data.Int
 import           Enums
@@ -22,16 +21,30 @@ import           Foreign.ForeignPtr
 import           Foreign.Marshal.Alloc
 import           Foreign.Ptr
 import           Foreign.Storable
+import           LinkedList
+import           MmsValue
 
 data SIedConnection
 
-data SLinkedList
-
-data SMmsVariableSpecification
-
-data SMmsValue
-
 type IedClientError = CInt
+
+data IedConnectionException = IedConnectionException CInt
+  deriving (Show)
+
+instance Exception IedConnectionException
+
+foreign import ccall unsafe
+               "iec61850_client.h IedConnection_getVariableSpecification"
+               c_IedConnection_getVariableSpecification ::
+               Ptr SIedConnection ->
+                 Ptr IedClientError ->
+                   CString -> CInt -> IO (Ptr SMmsVariableSpecification)
+
+foreign import ccall unsafe
+               "iec61850_client.h IedConnection_readObject"
+               c_IedConnection_readObject ::
+               Ptr SIedConnection ->
+                 Ptr CInt -> CString -> CInt -> IO (Ptr SMmsValue)
 
 foreign import ccall unsafe
                "iec61850_client.h IedConnection_connect" c_IedConnection_connect
@@ -85,111 +98,6 @@ foreign import ccall unsafe
                Ptr SIedConnection ->
                  Ptr IedClientError -> CString -> CInt -> IO (Ptr SLinkedList)
 
-foreign import ccall unsafe "iec61850_client.h LinkedList_getData"
-               c_LinkedList_getData :: Ptr SLinkedList -> IO (Ptr ())
-
-foreign import ccall unsafe "iec61850_client.h LinkedList_getNext"
-               c_LinkedList_getNext :: Ptr SLinkedList -> IO (Ptr SLinkedList)
-
-foreign import ccall unsafe "iec61850_client.h LinkedList_destroy"
-               c_LinkedList_destroy :: Ptr SLinkedList -> IO ()
-
-foreign import ccall unsafe
-               "iec61850_client.h IedConnection_getVariableSpecification"
-               c_IedConnection_getVariableSpecification ::
-               Ptr SIedConnection ->
-                 Ptr IedClientError ->
-                   CString -> CInt -> IO (Ptr SMmsVariableSpecification)
-
-foreign import ccall unsafe
-               "iec61850_client.h MmsVariableSpecification_getType"
-               c_MmsVariableSpecification_getType ::
-               Ptr SMmsVariableSpecification -> IO (CInt)
-
-foreign import ccall unsafe
-               "iec61850_client.h &MmsVariableSpecification_destroy"
-               c_MmsVariableSpecification_destroy ::
-               FunPtr (Ptr SMmsVariableSpecification -> IO ())
-
-foreign import ccall unsafe
-               "iec61850_client.h IedConnection_readObject"
-               c_IedConnection_readObject ::
-               Ptr SIedConnection ->
-                 Ptr CInt -> CString -> CInt -> IO (Ptr SMmsValue)
-
-foreign import ccall unsafe "iec61850_client.h MmsValue_toString"
-               c_MmsValue_toString :: Ptr SMmsValue -> IO (CString)
-
-foreign import ccall unsafe "iec61850_client.h MmsValue_getType"
-               c_MmsValue_getType :: Ptr SMmsValue -> IO (CInt)
-
-foreign import ccall unsafe "iec61850_client.h MmsValue_toInt32"
-               c_MmsValue_toInt32 :: Ptr SMmsValue -> IO (CInt)
-
-foreign import ccall unsafe "iec61850_client.h MmsValue_getBoolean"
-               c_MmsValue_getBoolean :: Ptr SMmsValue -> IO (CBool)
-
-foreign import ccall unsafe
-               "iec61850_client.h MmsValue_getUtcTimeInMsWithUs"
-               c_MmsValue_getUtcTimeInMsWithUs ::
-               Ptr SMmsValue -> Ptr CUint32 -> IO (CUint64)
-
-foreign import ccall unsafe
-               "iec61850_client.h MmsValue_getBitStringAsInteger"
-               c_MmsValue_getBitStringAsInteger ::
-               Ptr SMmsValue -> IO(CUint32)
-
-foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
-               c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
-
-fromCMmsVal mmsVal = do
-  type_ <- withForeignPtr mmsVal c_MmsValue_getType
-  case (MmsType type_) of
-    t
-      | t == mms_integer -> MmsInteger <$> withForeignPtr mmsVal (\mmsV -> c_MmsValue_toInt32 mmsV)
-      | t == mms_boolean -> do
-          cbool <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_getBoolean mmsV)
-          return $ MmsBoolean (cbool /= cFalse)
-      | t == mms_visible_string -> do
-          str <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_toString mmsV)
-          pstr <- peekCString str
-          free str
-          return $ MmsVisibleString pstr
-      | t == mms_utc_time -> do
-          alloca $ \usecPtr -> do
-            msec <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_getUtcTimeInMsWithUs mmsV usecPtr)
-            usec <- peek usecPtr
-            return $ MmsUtcTime $ 1000 * (fromIntegral msec) + (fromIntegral usec)
-      | t == mms_bit_string -> do
-          cbitstring <- fromIntegral <$> withForeignPtr mmsVal c_MmsValue_getBitStringAsInteger
-          return $ MmsBitString $ fromIntegral cbitstring
-    otherwise -> return $ MmsUnknown
-
-readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsVar)
-readVal con daReference fc = do
-  alloca $ \err -> useAsCString (pack daReference) $ \p -> do
-    mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (unFunctionalConstraint fc))
-    safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
-    fromCMmsVal safeMmsVal
-
-data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }
-  deriving (Show)
-
-mmsSpec :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
-mmsSpec con path fc = do
-  alloca $ \err -> useAsCString (pack path) $ \p -> do
-    mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (unFunctionalConstraint fc))
-    fMmsSpec <- newForeignPtr c_MmsVariableSpecification_destroy mmsSpec
-    errNo <- peek err
-    case errNo of
-      0 -> return $ fMmsSpec
-      _ -> throwIO (IedConnectionException errNo)
-
-mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsType)
-mmsType con path fc = do
-  fMmsSpec <- mmsSpec con path fc
-  MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType
-
 connect :: String -> Int32 -> IO (ForeignPtr SIedConnection)
 connect host port = do
   rawCon <- c_IedConnectionCreate
@@ -207,21 +115,6 @@ connect host port = do
         peek err
 
 close con = withForeignPtr con c_IedConnection_close
-
-linkedListgetString :: Ptr SLinkedList -> IO String
-linkedListgetString list = do
-  val <- c_LinkedList_getData list
-  let valStr = castPtr val
-  peekCString valStr
-
-linkedListToList :: Ptr SLinkedList -> [String] -> IO [String]
-linkedListToList list acc = do
-  next <- c_LinkedList_getNext list
-  if next == nullPtr
-    then return acc
-    else do
-      str <- linkedListgetString next
-      linkedListToList next (str : acc)
 
 logicalDevices :: ForeignPtr SIedConnection -> IO [String]
 logicalDevices con =
@@ -295,7 +188,24 @@ dataObjectDirectoryByFC con lnode fc =
         return ans
       _ -> throwIO (IedConnectionException errNo)
 
-data IedConnectionException = IedConnectionException CInt
-  deriving (Show)
+readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsVar)
+readVal con daReference fc = do
+  alloca $ \err -> useAsCString (pack daReference) $ \p -> do
+    mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (unFunctionalConstraint fc))
+    safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
+    fromCMmsVal safeMmsVal
 
-instance Exception IedConnectionException
+mmsSpec :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
+mmsSpec con path fc = do
+  alloca $ \err -> useAsCString (pack path) $ \p -> do
+    mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (unFunctionalConstraint fc))
+    fMmsSpec <- newForeignPtr c_MmsVariableSpecification_destroy mmsSpec
+    errNo <- peek err
+    case errNo of
+      0 -> return $ fMmsSpec
+      _ -> throwIO (IedConnectionException errNo)
+
+mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsType)
+mmsType con path fc = do
+  fMmsSpec <- mmsSpec con path fc
+  MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType

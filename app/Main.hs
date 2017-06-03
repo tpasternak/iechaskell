@@ -2,7 +2,7 @@ module Main where
 
 import           Control.Monad
 import           Enums
-import           Iec61850
+import           IedConnection
 
 simpleList = do
   let constraint = st
