@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     MmsValue Enums IedConnection LinkedList
+  exposed-modules:     MmsValue Enums IedConnection LinkedList BitString
   build-depends:       base >= 4.7 && < 5
                      , array
                      , bytestring
@@ -36,6 +36,7 @@ test-suite haskell61850-test
   main-is:             Spec.hs
   build-depends:       base
                      , haskell61850
+                     , HUnit
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
