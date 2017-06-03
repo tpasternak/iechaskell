@@ -2,6 +2,7 @@ module Enums
 where
 import Prelude hiding (or,all)
 import Foreign.C.Types
+import Data.Word
 
 #include "iec61850_client.h"
 
@@ -132,3 +133,8 @@ data MmsVar =
   | MmsUnknown
   deriving (Show)
 
+type CBool = #{type bool}
+
+cFalse, cTrue :: CBool
+cFalse = 0
+cTrue = 1

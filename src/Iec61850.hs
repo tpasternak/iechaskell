@@ -8,7 +8,7 @@ module Iec61850 (
     dataObjectDirectory,
     dataObjectDirectoryByFC,
     mmsType,
-    readValToString,
+    readVal,
     ) where
 
 import           Control.Exception
@@ -124,31 +124,32 @@ foreign import ccall unsafe "iec61850_client.h MmsValue_getType"
                c_MmsValue_getType :: Ptr SMmsValue -> IO (CInt)
 
 foreign import ccall unsafe "iec61850_client.h MmsValue_toInt32"
-               c_MmsValue_toInt32 :: Ptr SMmsValue -> IO(CInt)
+               c_MmsValue_toInt32 :: Ptr SMmsValue -> IO (CInt)
 
 foreign import ccall unsafe "iec61850_client.h MmsValue_getBoolean"
-               c_MmsValue_getBoolean :: Ptr SMmsValue -> IO(Bool)
+               c_MmsValue_getBoolean :: Ptr SMmsValue -> IO (CBool)
 
 foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
-               c_MmsValue_delete  :: FunPtr(Ptr SMmsValue -> IO())
+               c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
 
-
-readValToString :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsVar)
-readValToString con daReference fc = do
+readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsVar)
+readVal con daReference fc = do
   alloca $ \err -> useAsCString (pack daReference) $ \p -> do
     mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (unFunctionalConstraint fc))
     safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
     type_ <- c_MmsValue_getType mmsVal
-    ans <- case (MmsType type_) of
+    case (MmsType type_) of
       t
         | t == mms_integer -> MmsInteger <$> withForeignPtr safeMmsVal (\mmsV -> c_MmsValue_toInt32 mmsV)
+        | t == mms_boolean -> do
+            cbool <- withForeignPtr safeMmsVal (\mmsV -> c_MmsValue_getBoolean mmsV)
+            return $ MmsBoolean (cbool /= cFalse)
         | t == mms_visible_string -> do
             str <- withForeignPtr safeMmsVal (\mmsV -> c_MmsValue_toString mmsV)
             pstr <- peekCString str
             free str
             return $ MmsVisibleString pstr
       otherwise -> return $ MmsUnknown
-    return $ ans
 
 data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }
   deriving (Show)
