@@ -134,6 +134,11 @@ foreign import ccall unsafe
                c_MmsValue_getUtcTimeInMsWithUs ::
                Ptr SMmsValue -> Ptr CUint32 -> IO (CUint64)
 
+foreign import ccall unsafe
+               "iec61850_client.h MmsValue_getBitStringAsInteger"
+               c_MmsValue_getBitStringAsInteger ::
+               Ptr SMmsValue -> IO(CUint32)
+
 foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
                c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
 
@@ -155,6 +160,9 @@ fromCMmsVal mmsVal = do
             msec <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_getUtcTimeInMsWithUs mmsV usecPtr)
             usec <- peek usecPtr
             return $ MmsUtcTime $ 1000 * (fromIntegral msec) + (fromIntegral usec)
+      | t == mms_bit_string -> do
+          cbitstring <- fromIntegral <$> withForeignPtr mmsVal c_MmsValue_getBitStringAsInteger
+          return $ MmsBitString $ fromIntegral cbitstring
     otherwise -> return $ MmsUnknown
 
 readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsVar)

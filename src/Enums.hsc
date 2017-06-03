@@ -118,7 +118,7 @@ data MmsVar =
   Array [MmsVar]
   | Structure [MmsVar]
   | MmsBoolean Bool
-  | BitString 
+  | MmsBitString Word
   | MmsInteger CInt
   | Unsigned Int
   | Float 
