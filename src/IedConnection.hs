@@ -116,76 +116,58 @@ connect host port = do
 
 close con = withForeignPtr con c_IedConnection_close
 
-logicalDevices :: ForeignPtr SIedConnection -> IO [String]
-logicalDevices con =
+getStringListFromIed con fun =
   alloca $ \err -> do
-    linkedList <- withForeignPtr con (`c_IedConnection_getLogicalDeviceList` err)
-    linkedListSafe <- newForeignPtr c_LinkedList_destroy linkedList
+    nodes <- withForeignPtr con (fun err)
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
-      0 -> linkedListToList linkedListSafe
+      0 -> linkedListToList nodesSafe
       _ -> throwIO (IedConnectionException errNo)
+
+logicalDevices :: ForeignPtr SIedConnection -> IO [String]
+logicalDevices con =
+  getStringListFromIed con (flip c_IedConnection_getLogicalDeviceList)
 
 logicalNodes :: ForeignPtr SIedConnection -> String -> IO [String]
 logicalNodes con device =
-  alloca $ \err -> useAsCString (pack device) $ \dev -> do
-    nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalDeviceDirectory rawCon err dev)
-    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
-    errNo <- peek err
-    case errNo of
-      0 -> linkedListToList nodesSafe
-      _ -> throwIO (IedConnectionException errNo)
+  useAsCString (pack device) $ \dev ->
+    getStringListFromIed con
+      (\err rawCon -> c_IedConnection_getLogicalDeviceDirectory rawCon err dev)
 
 logicalNodeVariables :: ForeignPtr SIedConnection -> String -> IO [String]
 logicalNodeVariables con lnode =
-  alloca $ \err -> useAsCString (pack lnode) $ \dev -> do
-    nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
-    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
-    errNo <- peek err
-    case errNo of
-      0 -> linkedListToList nodesSafe
-      _ -> throwIO (IedConnectionException errNo)
+  useAsCString (pack lnode) $ \dev ->
+    getStringListFromIed con (\err rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
 
 logicalNodeDirectory :: ForeignPtr SIedConnection -> String -> AcsiClass -> IO [String]
 logicalNodeDirectory con lnode acsiClass =
-  alloca $ \err -> useAsCString (pack lnode) $ \dev -> do
-    nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalNodeDirectory rawCon err dev (unAcsiClass acsiClass))
-    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
-    errNo <- peek err
-    case errNo of
-      0 -> linkedListToList nodesSafe
-      _ -> throwIO (IedConnectionException errNo)
+  useAsCString (pack lnode) $ \dev ->
+    getStringListFromIed con
+      (\err rawCon -> c_IedConnection_getLogicalNodeDirectory rawCon err dev (unAcsiClass acsiClass))
 
 dataObjectDirectory :: ForeignPtr SIedConnection -> String -> IO [String]
 dataObjectDirectory con lnode =
-  alloca $ \err -> useAsCString (pack lnode) $ \dev -> do
-    nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getDataDirectory rawCon err dev)
-    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
-    errNo <- peek err
-    case errNo of
-      0 -> linkedListToList nodesSafe
-      _ -> throwIO (IedConnectionException errNo)
+  useAsCString (pack lnode) $ \dev ->
+    getStringListFromIed con (\err rawCon -> c_IedConnection_getDataDirectory rawCon err dev)
 
 dataObjectDirectoryByFC :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO [String]
 dataObjectDirectoryByFC con lnode fc =
-  alloca $ \err -> useAsCString (pack lnode) $ \dev -> do
-    nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getDataDirectoryByFC rawCon err dev (unFunctionalConstraint fc))
-    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
-    errNo <- peek err
-    case errNo of
-      0 -> linkedListToList nodesSafe
-      _ -> throwIO (IedConnectionException errNo)
+  useAsCString (pack lnode) $ \dev ->
+    getStringListFromIed con
+      (\err rawCon ->
+         c_IedConnection_getDataDirectoryByFC rawCon err dev (unFunctionalConstraint fc))
 
 readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO MmsVar
 readVal con daReference fc =
-  alloca $ \err -> useAsCString (pack daReference) $ \p -> do
+  useAsCString (pack daReference) $ \p -> alloca $ \err -> do
     mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (unFunctionalConstraint fc))
     safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
     fromCMmsVal safeMmsVal
 
 mmsSpec :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
 mmsSpec con path fc =
-  alloca $ \err -> useAsCString (pack path) $ \p -> do
+  useAsCString (pack path) $ \p -> alloca $ \err -> do
     mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (unFunctionalConstraint fc))
     fMmsSpec <- newForeignPtr c_MmsVariableSpecification_destroy mmsSpec
     errNo <- peek err
