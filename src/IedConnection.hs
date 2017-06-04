@@ -188,24 +188,24 @@ dataObjectDirectoryByFC con lnode fc =
         return ans
       _ -> throwIO (IedConnectionException errNo)
 
-readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsVar)
-readVal con daReference fc = do
+readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO MmsVar
+readVal con daReference fc =
   alloca $ \err -> useAsCString (pack daReference) $ \p -> do
     mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (unFunctionalConstraint fc))
     safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
     fromCMmsVal safeMmsVal
 
 mmsSpec :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
-mmsSpec con path fc = do
+mmsSpec con path fc =
   alloca $ \err -> useAsCString (pack path) $ \p -> do
     mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (unFunctionalConstraint fc))
     fMmsSpec <- newForeignPtr c_MmsVariableSpecification_destroy mmsSpec
     errNo <- peek err
     case errNo of
-      0 -> return $ fMmsSpec
+      0 -> return fMmsSpec
       _ -> throwIO (IedConnectionException errNo)
 
-mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (MmsType)
+mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO MmsType
 mmsType con path fc = do
   fMmsSpec <- mmsSpec con path fc
   MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType
