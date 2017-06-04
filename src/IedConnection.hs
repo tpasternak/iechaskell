@@ -123,9 +123,7 @@ logicalDevices con =
     linkedListSafe <- newForeignPtr c_LinkedList_destroy linkedList
     errNo <- peek err
     case errNo of
-      0 -> do
-        ans <- linkedListToListSafe linkedListSafe
-        return ans
+      0 -> linkedListToList linkedListSafe
       _ -> throwIO (IedConnectionException errNo)
 
 logicalNodes :: ForeignPtr SIedConnection -> String -> IO [String]
@@ -135,9 +133,7 @@ logicalNodes con device =
     nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
-      0 -> do
-        ans <- linkedListToListSafe nodesSafe
-        return ans
+      0 -> linkedListToList nodesSafe
       _ -> throwIO (IedConnectionException errNo)
 
 logicalNodeVariables :: ForeignPtr SIedConnection -> String -> IO [String]
@@ -147,9 +143,7 @@ logicalNodeVariables con lnode =
     nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
-      0 -> do
-        ans <- linkedListToListSafe nodesSafe
-        return ans
+      0 -> linkedListToList nodesSafe
       _ -> throwIO (IedConnectionException errNo)
 
 logicalNodeDirectory :: ForeignPtr SIedConnection -> String -> AcsiClass -> IO [String]
@@ -159,9 +153,7 @@ logicalNodeDirectory con lnode acsiClass =
     nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
-      0 -> do
-        ans <- linkedListToListSafe nodesSafe
-        return ans
+      0 -> linkedListToList nodesSafe
       _ -> throwIO (IedConnectionException errNo)
 
 dataObjectDirectory :: ForeignPtr SIedConnection -> String -> IO [String]
@@ -171,9 +163,7 @@ dataObjectDirectory con lnode =
     nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
-      0 -> do
-        ans <- linkedListToListSafe nodesSafe
-        return ans
+      0 -> linkedListToList nodesSafe
       _ -> throwIO (IedConnectionException errNo)
 
 dataObjectDirectoryByFC :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO [String]
@@ -183,9 +173,7 @@ dataObjectDirectoryByFC con lnode fc =
     nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
-      0 -> do
-        ans <- linkedListToListSafe nodesSafe
-        return ans
+      0 -> linkedListToList nodesSafe
       _ -> throwIO (IedConnectionException errNo)
 
 readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO MmsVar

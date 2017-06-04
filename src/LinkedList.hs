@@ -29,14 +29,14 @@ linkedListgetString list = do
   let valStr = castPtr val
   peekCString valStr
 
-linkedListToList :: Ptr SLinkedList -> [String] -> IO [String]
-linkedListToList list acc = do
+linkedListToListUnsafe :: Ptr SLinkedList -> [String] -> IO [String]
+linkedListToListUnsafe list acc = do
   next <- c_LinkedList_getNext list
   if next == nullPtr
     then return acc
     else do
       str <- linkedListgetString next
-      linkedListToList next (str : acc)
+      linkedListToListUnsafe next (str : acc)
 
-linkedListToListSafe :: ForeignPtr SLinkedList -> IO [String]
-linkedListToListSafe list = withForeignPtr list (\l -> linkedListToList l [])
+linkedListToList :: ForeignPtr SLinkedList -> IO [String]
+linkedListToList list = withForeignPtr list (\l -> linkedListToListUnsafe l [])
