@@ -124,7 +124,7 @@ data MmsVar =
   | MmsBoolean Bool
   | MmsBitString BitString
   | MmsInteger CInt
-  | Unsigned Int
+  | MmsUnsigned Word
   | MmsFloat Double
   | MmsOctetString 
   | MmsVisibleString String
