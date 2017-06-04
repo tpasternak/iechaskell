@@ -60,6 +60,9 @@ foreign import ccall unsafe
 foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
                c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
 
+foreign import ccall unsafe "iec61850_client.h MmsValue_toDouble"
+               c_MmsValue_toDouble :: Ptr SMmsValue -> IO CDouble
+
 fromCMmsVal mmsVal = withForeignPtr mmsVal fromCMmsValUnsafe
 
 fromCMmsValUnsafe mmsVal = do
@@ -85,9 +88,11 @@ fromCMmsValUnsafe mmsVal = do
           return $ MmsBitString $ BitString cbitstring
       | t == mms_structure -> do
           size <- fromIntegral <$> c_MmsValue_getArraySize mmsVal
-          MmsStructure <$> forM [0 .. (size - 1)] (\idx -> do
-              elem <- c_MmsValue_getElement mmsVal idx
-              fromCMmsValUnsafe elem)
+          MmsStructure <$> forM [0 .. (size - 1)]
+                             (\idx -> do
+                                elem <- c_MmsValue_getElement mmsVal idx
+                                fromCMmsValUnsafe elem)
+      | t == mms_float -> MmsFloat . realToFrac <$> c_MmsValue_toDouble mmsVal
     otherwise -> return $ MmsUnknown $ show $ MmsType type_
 
 data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }

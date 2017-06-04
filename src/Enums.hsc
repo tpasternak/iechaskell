@@ -122,7 +122,7 @@ data MmsVar =
   | MmsBitString BitString
   | MmsInteger CInt
   | Unsigned Int
-  | Float 
+  | MmsFloat Double
   | MmsOctetString 
   | MmsVisibleString String
   | MmsGeneralizedTime
