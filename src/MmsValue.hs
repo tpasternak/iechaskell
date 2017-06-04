@@ -85,12 +85,9 @@ fromCMmsValUnsafe mmsVal = do
           return $ MmsBitString $ BitString cbitstring
       | t == mms_structure -> do
           size <- fromIntegral <$> c_MmsValue_getArraySize mmsVal
-          elements <- forM [0 .. (size - 1)]
-                        (\idx -> do
-                           elem <- c_MmsValue_getElement mmsVal idx
-                           fromCMmsValUnsafe elem)
-
-          return $ MmsStructure elements
+          MmsStructure <$> forM [0 .. (size - 1)] (\idx -> do
+              elem <- c_MmsValue_getElement mmsVal idx
+              fromCMmsValUnsafe elem)
     otherwise -> return $ MmsUnknown $ show $ MmsType type_
 
 data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }
