@@ -20,8 +20,8 @@ foreign import ccall unsafe "iec61850_client.h LinkedList_getData"
 foreign import ccall unsafe "iec61850_client.h LinkedList_getNext"
                c_LinkedList_getNext :: Ptr SLinkedList -> IO (Ptr SLinkedList)
 
-foreign import ccall unsafe "iec61850_client.h LinkedList_destroy"
-               c_LinkedList_destroy :: Ptr SLinkedList -> IO ()
+foreign import ccall unsafe "iec61850_client.h &LinkedList_destroy"
+               c_LinkedList_destroy :: FunPtr (Ptr SLinkedList -> IO ())
 
 linkedListgetString :: Ptr SLinkedList -> IO String
 linkedListgetString list = do
@@ -37,3 +37,6 @@ linkedListToList list acc = do
     else do
       str <- linkedListgetString next
       linkedListToList next (str : acc)
+
+linkedListToListSafe :: ForeignPtr SLinkedList -> IO [String]
+linkedListToListSafe list = withForeignPtr list (\l -> linkedListToList l [])

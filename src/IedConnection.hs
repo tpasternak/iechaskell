@@ -120,11 +120,11 @@ logicalDevices :: ForeignPtr SIedConnection -> IO [String]
 logicalDevices con =
   alloca $ \err -> do
     linkedList <- withForeignPtr con (`c_IedConnection_getLogicalDeviceList` err)
+    linkedListSafe <- newForeignPtr c_LinkedList_destroy linkedList
     errNo <- peek err
     case errNo of
       0 -> do
-        ans <- linkedListToList linkedList []
-        c_LinkedList_destroy linkedList
+        ans <- linkedListToListSafe linkedListSafe
         return ans
       _ -> throwIO (IedConnectionException errNo)
 
@@ -132,11 +132,11 @@ logicalNodes :: ForeignPtr SIedConnection -> String -> IO [String]
 logicalNodes con device =
   alloca $ \err -> useAsCString (pack device) $ \dev -> do
     nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalDeviceDirectory rawCon err dev)
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
       0 -> do
-        ans <- linkedListToList nodes []
-        c_LinkedList_destroy nodes
+        ans <- linkedListToListSafe nodesSafe
         return ans
       _ -> throwIO (IedConnectionException errNo)
 
@@ -144,11 +144,11 @@ logicalNodeVariables :: ForeignPtr SIedConnection -> String -> IO [String]
 logicalNodeVariables con lnode =
   alloca $ \err -> useAsCString (pack lnode) $ \dev -> do
     nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
       0 -> do
-        ans <- linkedListToList nodes []
-        c_LinkedList_destroy nodes
+        ans <- linkedListToListSafe nodesSafe
         return ans
       _ -> throwIO (IedConnectionException errNo)
 
@@ -156,11 +156,11 @@ logicalNodeDirectory :: ForeignPtr SIedConnection -> String -> AcsiClass -> IO [
 logicalNodeDirectory con lnode acsiClass =
   alloca $ \err -> useAsCString (pack lnode) $ \dev -> do
     nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getLogicalNodeDirectory rawCon err dev (unAcsiClass acsiClass))
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
       0 -> do
-        ans <- linkedListToList nodes []
-        c_LinkedList_destroy nodes
+        ans <- linkedListToListSafe nodesSafe
         return ans
       _ -> throwIO (IedConnectionException errNo)
 
@@ -168,11 +168,11 @@ dataObjectDirectory :: ForeignPtr SIedConnection -> String -> IO [String]
 dataObjectDirectory con lnode =
   alloca $ \err -> useAsCString (pack lnode) $ \dev -> do
     nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getDataDirectory rawCon err dev)
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
       0 -> do
-        ans <- linkedListToList nodes []
-        c_LinkedList_destroy nodes
+        ans <- linkedListToListSafe nodesSafe
         return ans
       _ -> throwIO (IedConnectionException errNo)
 
@@ -180,11 +180,11 @@ dataObjectDirectoryByFC :: ForeignPtr SIedConnection -> String -> FunctionalCons
 dataObjectDirectoryByFC con lnode fc =
   alloca $ \err -> useAsCString (pack lnode) $ \dev -> do
     nodes <- withForeignPtr con (\rawCon -> c_IedConnection_getDataDirectoryByFC rawCon err dev (unFunctionalConstraint fc))
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo <- peek err
     case errNo of
       0 -> do
-        ans <- linkedListToList nodes []
-        c_LinkedList_destroy nodes
+        ans <- linkedListToListSafe nodesSafe
         return ans
       _ -> throwIO (IedConnectionException errNo)
 
