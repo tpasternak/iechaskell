@@ -4,27 +4,39 @@ import           Control.Monad
 import           Enums
 import           IedConnection
 
-simpleList = do
+data AttributeSpec = AttributeSpec {
+  ref :: String,
+  fc :: FunctionalConstraint
+  } deriving(Show)
+
+discover host  = do 
   con <- connect "localhost" 102
   ldevices <- logicalDevices con
-  forM_ ldevices $
+  lds <- forM ldevices $
     \dev -> do
       nodes <- logicalNodes con dev
-      forM_ nodes $
+      nds <- forM nodes $
         \node -> do
           let nodeFull = dev ++ "/" ++ node
           objects <- logicalNodeDirectory con nodeFull dataObject
-          forM_ objects $
+          obs <- forM objects $
             \object -> do
               let attrPath = nodeFull ++ "." ++ object
-              forM_ allConstraints $
+              costrs <- forM allConstraints $
                 \constraint -> do
                   attributes <- dataObjectDirectoryByFC con attrPath constraint
-                  forM_ attributes $
+                  forM attributes $
                     \attribute -> do
                       let fullPath = attrPath ++ "." ++ attribute
                       let cleanPath = takeWhile (/= '[') fullPath
-                      val <- readVal con cleanPath constraint
-                      putStrLn $ fullPath ++ " = " ++ show val
+                      return $ AttributeSpec cleanPath constraint
+              return $ msum costrs
+          return $ msum obs
+      return $ msum nds
+  return (concat lds)
+  
+simpleList = do
+    x <- (discover "localhost") -- $ \x-> putStrLn ((ref x) ++ (show (fc x)))
+    forM_ x (\elem -> putStrLn (show elem))
 
 main = simpleList
