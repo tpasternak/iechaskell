@@ -76,7 +76,6 @@ fromCMmsValUnsafe mmsVal = do
       | t == mms_visible_string -> do
           str <- c_MmsValue_toString mmsVal
           pstr <- peekCString str
-          free str
           return $ MmsVisibleString pstr
       | t == mms_utc_time ->
           alloca $ \usecPtr -> do

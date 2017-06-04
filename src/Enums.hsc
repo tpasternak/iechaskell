@@ -73,6 +73,9 @@ instance Show FunctionalConstraint where
       | x == all = "ALL"
       | x == none = "NONE"
 
+allConstraints :: [FunctionalConstraint]
+allConstraints = [st, mx, sp, sv, cf, dc, sg, se, sr, or, bl, ex, co, us, ms, rp, br, lg]
+
 
 newtype MmsType = MmsType { unMmsType :: CInt }
   deriving (Eq)
