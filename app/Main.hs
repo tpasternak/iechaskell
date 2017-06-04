@@ -23,8 +23,7 @@ simpleList = do
                 \attribute -> do
                   let fullPath = attrPath ++ "." ++ attribute
                   let cleanPath = takeWhile (/= '[') fullPath
-                  type_ <- mmsType con cleanPath constraint
                   val <- readVal con cleanPath constraint
-                  putStrLn $ fullPath ++ " :: " ++ (show type_) ++ " = " ++ (show val)
+                  putStrLn $ fullPath ++ " = " ++ (show val)
 
 main = simpleList

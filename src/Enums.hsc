@@ -131,7 +131,7 @@ data MmsVar =
   | MmsObjId
   | MmsString String
   | MmsUtcTime Int
-  | MmsUnknown
+  | MmsUnknown String
   deriving (Show)
 
 type CBool = #{type bool}

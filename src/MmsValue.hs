@@ -72,7 +72,7 @@ fromCMmsVal mmsVal = do
       | t == mms_bit_string -> do
           cbitstring <- fromIntegral <$> withForeignPtr mmsVal c_MmsValue_getBitStringAsInteger
           return $ MmsBitString $ BitString cbitstring
-    otherwise -> return MmsUnknown
+    otherwise -> return $ MmsUnknown $ show $ MmsType type_
 
 data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }
   deriving (Show)
