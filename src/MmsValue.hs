@@ -1,5 +1,6 @@
 module MmsValue where
 
+import           BitString
 import           Control.Exception
 import           Data.Array
 import           Data.ByteString.Char8 hiding (head, putStr, putStrLn)
@@ -56,10 +57,10 @@ fromCMmsVal mmsVal = do
     t
       | t == mms_integer -> MmsInteger <$> withForeignPtr mmsVal (\mmsV -> c_MmsValue_toInt32 mmsV)
       | t == mms_boolean -> do
-          cbool <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_getBoolean mmsV)
+          cbool <- withForeignPtr mmsVal c_MmsValue_getBoolean
           return $ MmsBoolean (cbool /= cFalse)
       | t == mms_visible_string -> do
-          str <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_toString mmsV)
+          str <- withForeignPtr mmsVal c_MmsValue_toString
           pstr <- peekCString str
           free str
           return $ MmsVisibleString pstr
@@ -67,11 +68,11 @@ fromCMmsVal mmsVal = do
           alloca $ \usecPtr -> do
             msec <- withForeignPtr mmsVal (\mmsV -> c_MmsValue_getUtcTimeInMsWithUs mmsV usecPtr)
             usec <- peek usecPtr
-            return $ MmsUtcTime $ 1000 * (fromIntegral msec) + (fromIntegral usec)
+            return $ MmsUtcTime $ 1000 * fromIntegral msec + fromIntegral usec
       | t == mms_bit_string -> do
           cbitstring <- fromIntegral <$> withForeignPtr mmsVal c_MmsValue_getBitStringAsInteger
-          return $ MmsBitString $ fromIntegral cbitstring
-    otherwise -> return $ MmsUnknown
+          return $ MmsBitString $ BitString cbitstring
+    otherwise -> return MmsUnknown
 
 data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }
   deriving (Show)

@@ -3,6 +3,7 @@ where
 import Prelude hiding (or,all)
 import Foreign.C.Types
 import Data.Word
+import BitString
 
 #include "iec61850_client.h"
 
@@ -118,7 +119,7 @@ data MmsVar =
   Array [MmsVar]
   | Structure [MmsVar]
   | MmsBoolean Bool
-  | MmsBitString Word
+  | MmsBitString BitString
   | MmsInteger CInt
   | Unsigned Int
   | Float 
