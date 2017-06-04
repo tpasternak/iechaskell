@@ -2,6 +2,7 @@ module MmsValue where
 
 import           BitString
 import           Control.Exception
+import           Control.Monad
 import           Data.Array
 import           Data.ByteString.Char8 hiding (head, putStr, putStrLn)
 import           Data.Int
@@ -45,34 +46,51 @@ foreign import ccall unsafe
                Ptr SMmsValue -> Ptr CUint32 -> IO CUint64
 
 foreign import ccall unsafe
+               "iec61850_client.h MmsValue_getArraySize" c_MmsValue_getArraySize
+               :: Ptr SMmsValue -> IO CUint32
+
+foreign import ccall unsafe "iec61850_client.h MmsValue_getElement"
+               c_MmsValue_getElement ::
+               Ptr SMmsValue -> CInt -> IO (Ptr SMmsValue)
+
+foreign import ccall unsafe
                "iec61850_client.h MmsValue_getBitStringAsInteger"
                c_MmsValue_getBitStringAsInteger :: Ptr SMmsValue -> IO CUint32
 
 foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
                c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
 
-fromCMmsVal mmsVal = do
-  type_ <- withForeignPtr mmsVal c_MmsValue_getType
+fromCMmsVal mmsVal = withForeignPtr mmsVal fromCMmsValUnsafe
+
+fromCMmsValUnsafe mmsVal = do
+  type_ <- c_MmsValue_getType mmsVal
   case MmsType type_ of
     t
-      | t == mms_integer -> MmsInteger <$> withForeignPtr mmsVal c_MmsValue_toInt32
+      | t == mms_integer -> MmsInteger <$> c_MmsValue_toInt32 mmsVal
       | t == mms_boolean -> do
-          cbool <- withForeignPtr mmsVal c_MmsValue_getBoolean
+          cbool <- c_MmsValue_getBoolean mmsVal
           return $ MmsBoolean (cbool /= cFalse)
       | t == mms_visible_string -> do
-          str <- withForeignPtr mmsVal c_MmsValue_toString
+          str <- c_MmsValue_toString mmsVal
           pstr <- peekCString str
           free str
           return $ MmsVisibleString pstr
       | t == mms_utc_time ->
           alloca $ \usecPtr -> do
-            msec <- withForeignPtr mmsVal (`c_MmsValue_getUtcTimeInMsWithUs` usecPtr)
+            msec <- c_MmsValue_getUtcTimeInMsWithUs mmsVal usecPtr
             usec <- peek usecPtr
             return $ MmsUtcTime $ 1000 * fromIntegral msec + fromIntegral usec
       | t == mms_bit_string -> do
-          cbitstring <- fromIntegral <$> withForeignPtr mmsVal c_MmsValue_getBitStringAsInteger
+          cbitstring <- fromIntegral <$> c_MmsValue_getBitStringAsInteger mmsVal
           return $ MmsBitString $ BitString cbitstring
+      | t == mms_structure -> do
+          size <- fromIntegral <$> c_MmsValue_getArraySize mmsVal
+          elements <- forM [0 .. (size - 1)]
+                        (\idx -> do
+                           elem <- c_MmsValue_getElement mmsVal idx
+                           fromCMmsValUnsafe elem)
 
+          return $ MmsStructure elements
     otherwise -> return $ MmsUnknown $ show $ MmsType type_
 
 data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }

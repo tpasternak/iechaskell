@@ -5,7 +5,7 @@ import           Enums
 import           IedConnection
 
 simpleList = do
-  let constraint = st
+  let constraint = mx
   con <- connect "localhost" 102
   ldevices <- logicalDevices con
   forM_ ldevices $

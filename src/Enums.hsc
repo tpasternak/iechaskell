@@ -117,7 +117,7 @@ instance Show MmsType where
 
 data MmsVar =
   Array [MmsVar]
-  | Structure [MmsVar]
+  | MmsStructure [MmsVar]
   | MmsBoolean Bool
   | MmsBitString BitString
   | MmsInteger CInt
