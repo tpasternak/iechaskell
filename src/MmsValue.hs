@@ -73,10 +73,7 @@ fromCMmsValUnsafe mmsVal = do
       | t == mms_boolean -> do
           cbool <- c_MmsValue_getBoolean mmsVal
           return $ MmsBoolean (cbool /= cFalse)
-      | t == mms_visible_string -> do
-          str <- c_MmsValue_toString mmsVal
-          pstr <- peekCString str
-          return $ MmsVisibleString pstr
+      | t == mms_visible_string -> MmsVisibleString <$> (c_MmsValue_toString >=> peekCString) mmsVal
       | t == mms_utc_time ->
           alloca $ \usecPtr -> do
             msec <- c_MmsValue_getUtcTimeInMsWithUs mmsVal usecPtr
