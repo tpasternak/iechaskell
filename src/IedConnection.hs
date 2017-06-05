@@ -9,10 +9,12 @@ module IedConnection (
     dataObjectDirectoryByFC,
     readVal,
     mmsType,
+    discover,
     ) where
 
 import           Control.Exception
-import           Data.ByteString.Char8 hiding (head, putStr, putStrLn)
+import           Control.Monad
+import           Data.ByteString.Char8 (pack, useAsCString)
 import           Data.Int
 import           Enums
 import           Foreign.C.String
@@ -23,6 +25,9 @@ import           Foreign.Ptr
 import           Foreign.Storable
 import           LinkedList
 import           MmsValue
+
+data AttributeSpec = AttributeSpec { ref :: String, fc :: FunctionalConstraint }
+  deriving (Show)
 
 data SIedConnection
 
@@ -179,3 +184,25 @@ mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO Mms
 mmsType con path fc = do
   fMmsSpec <- mmsSpec con path fc
   MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType
+
+discover host = do
+  con <- connect "localhost" 102
+  ldevices <- logicalDevices con
+  liftM msum $ forM ldevices $
+    \dev -> do
+      nodes <- logicalNodes con dev
+      liftM msum $ forM nodes $
+        \node -> do
+          let nodeFull = dev ++ "/" ++ node
+          objects <- logicalNodeDirectory con nodeFull dataObject
+          liftM msum $ forM objects $
+            \object -> do
+              let attrPath = nodeFull ++ "." ++ object
+              liftM msum $ forM allConstraints $
+                \constraint -> do
+                  attributes <- dataObjectDirectoryByFC con attrPath constraint
+                  forM attributes $
+                    \attribute -> do
+                      let fullPath = attrPath ++ "." ++ attribute
+                      let cleanPath = takeWhile (/= '[') fullPath
+                      return $ AttributeSpec cleanPath constraint
