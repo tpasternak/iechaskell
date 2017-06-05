@@ -1,3 +1,6 @@
+-- This demo reads all MMS variables from a mms
+-- server running on localhost:102
+
 module Main where
 
 import           Control.Monad
