@@ -4,7 +4,6 @@ module Client (
     logicalNodeDirectory,
     logicalNodes,
     logicalNodeVariables,
-    dataObjectDirectory,
     dataObjectDirectoryByFC,
     readVal,
     mmsType,
@@ -106,12 +105,6 @@ foreign import ccall unsafe
                  Ptr IedClientError -> CString -> CInt -> IO (Ptr SLinkedList)
 
 foreign import ccall unsafe
-               "iec61850_client.h IedConnection_getDataDirectory"
-               c_IedConnection_getDataDirectory ::
-               Ptr SIedConnection ->
-                 Ptr IedClientError -> CString -> IO (Ptr SLinkedList)
-
-foreign import ccall unsafe
                "iec61850_client.h IedConnection_getDataDirectoryByFC"
                c_IedConnection_getDataDirectoryByFC ::
                Ptr SIedConnection ->
@@ -168,12 +161,7 @@ logicalNodeDirectory con lnode acsiClass =
     getStringListFromIed con
       (\err rawCon -> c_IedConnection_getLogicalNodeDirectory rawCon err dev (unAcsiClass acsiClass))
 
-dataObjectDirectory :: ForeignPtr SIedConnection -> String -> IO [String]
-dataObjectDirectory con lnode =
-  useAsCString (pack lnode) $ \dev ->
-    getStringListFromIed con (\err rawCon -> c_IedConnection_getDataDirectory rawCon err dev)
-
-dataObjectDirectoryByFC :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO [String]
+dataObjectDirectoryByFC :: IedConnection -> String -> FunctionalConstraint -> IO [String]
 dataObjectDirectoryByFC con lnode fc =
   useAsCString (pack lnode) $ \dev ->
     getStringListFromIed con
