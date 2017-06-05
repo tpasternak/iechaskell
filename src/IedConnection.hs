@@ -10,6 +10,8 @@ module IedConnection (
     readVal,
     mmsType,
     discover,
+    ref,
+    fc,
     ) where
 
 import           Control.Exception
@@ -185,8 +187,7 @@ mmsType con path fc = do
   fMmsSpec <- mmsSpec con path fc
   MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType
 
-discover host = do
-  con <- connect "localhost" 102
+discover con = do
   ldevices <- logicalDevices con
   liftM msum $ forM ldevices $
     \dev -> do
