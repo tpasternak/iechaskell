@@ -15,7 +15,8 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     MmsValue Enums IedConnection LinkedList BitString
+  exposed-modules:     Enums.Enums Enums.FC Enums.AcsiClass Client  BitString Mms
+  other-modules:       LinkedList MmsInternal EnumsInternal
   build-depends:       base >= 4.7 && < 5
                      , array
                      , bytestring

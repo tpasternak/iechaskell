@@ -1,6 +1,6 @@
-module IedConnection (
+module Client (
+    IedConnection(),
     logicalNodeDirectory,
-    SIedConnection,
     connect,
     logicalDevices,
     logicalNodes,
@@ -10,15 +10,15 @@ module IedConnection (
     readVal,
     mmsType,
     discover,
-    ref,
-    fc,
     ) where
 
 import           Control.Exception
 import           Control.Monad
 import           Data.ByteString.Char8 (pack, useAsCString)
 import           Data.Int
-import           Enums
+import           Enums.AcsiClass
+import           Enums.Enums
+import           Enums.FC
 import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.ForeignPtr
@@ -26,12 +26,12 @@ import           Foreign.Marshal.Alloc
 import           Foreign.Ptr
 import           Foreign.Storable
 import           LinkedList
-import           MmsValue
-
-data AttributeSpec = AttributeSpec { ref :: String, fc :: FunctionalConstraint }
-  deriving (Show)
+import           Mms
+import           MmsInternal
 
 data SIedConnection
+
+type IedConnection = ForeignPtr SIedConnection
 
 type IedClientError = CInt
 
@@ -39,6 +39,19 @@ data IedConnectionException = IedConnectionException CInt
   deriving (Show)
 
 instance Exception IedConnectionException
+
+foreign import ccall unsafe
+               "iec61850_client.h MmsVariableSpecification_getType"
+               c_MmsVariableSpecification_getType ::
+               Ptr SMmsVariableSpecification -> IO CInt
+
+foreign import ccall unsafe
+               "iec61850_client.h &MmsVariableSpecification_destroy"
+               c_MmsVariableSpecification_destroy ::
+               FunPtr (Ptr SMmsVariableSpecification -> IO ())
+
+foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
+               c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
 
 foreign import ccall unsafe
                "iec61850_client.h IedConnection_getVariableSpecification"
@@ -105,11 +118,11 @@ foreign import ccall unsafe
                Ptr SIedConnection ->
                  Ptr IedClientError -> CString -> CInt -> IO (Ptr SLinkedList)
 
-connect :: String -> Int32 -> IO (ForeignPtr SIedConnection)
+connect :: String -> Int32 -> IO IedConnection
 connect host port = do
   rawCon <- c_IedConnectionCreate
   con <- newForeignPtr c_IedConnection_destroy rawCon
-  e <- iedConnectionConnect rawCon host 102
+  e <- iedConnectionConnect rawCon host port
   case e of
     0 -> return con
     _ -> throwIO (IedConnectionException e)
@@ -132,22 +145,22 @@ getStringListFromIed con fun =
       0 -> linkedListToList nodesSafe
       _ -> throwIO (IedConnectionException errNo)
 
-logicalDevices :: ForeignPtr SIedConnection -> IO [String]
+logicalDevices :: IedConnection -> IO [String]
 logicalDevices con =
   getStringListFromIed con (flip c_IedConnection_getLogicalDeviceList)
 
-logicalNodes :: ForeignPtr SIedConnection -> String -> IO [String]
+logicalNodes :: IedConnection -> String -> IO [String]
 logicalNodes con device =
   useAsCString (pack device) $ \dev ->
     getStringListFromIed con
       (\err rawCon -> c_IedConnection_getLogicalDeviceDirectory rawCon err dev)
 
-logicalNodeVariables :: ForeignPtr SIedConnection -> String -> IO [String]
+logicalNodeVariables :: IedConnection -> String -> IO [String]
 logicalNodeVariables con lnode =
   useAsCString (pack lnode) $ \dev ->
     getStringListFromIed con (\err rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
 
-logicalNodeDirectory :: ForeignPtr SIedConnection -> String -> AcsiClass -> IO [String]
+logicalNodeDirectory :: IedConnection -> String -> AcsiClass -> IO [String]
 logicalNodeDirectory con lnode acsiClass =
   useAsCString (pack lnode) $ \dev ->
     getStringListFromIed con
@@ -165,14 +178,14 @@ dataObjectDirectoryByFC con lnode fc =
       (\err rawCon ->
          c_IedConnection_getDataDirectoryByFC rawCon err dev (unFunctionalConstraint fc))
 
-readVal :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO MmsVar
+readVal :: IedConnection -> String -> FunctionalConstraint -> IO MmsVar
 readVal con daReference fc =
   useAsCString (pack daReference) $ \p -> alloca $ \err -> do
     mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (unFunctionalConstraint fc))
     safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
     fromCMmsVal safeMmsVal
 
-mmsSpec :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
+mmsSpec :: IedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
 mmsSpec con path fc =
   useAsCString (pack path) $ \p -> alloca $ \err -> do
     mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (unFunctionalConstraint fc))
@@ -182,11 +195,12 @@ mmsSpec con path fc =
       0 -> return fMmsSpec
       _ -> throwIO (IedConnectionException errNo)
 
-mmsType :: ForeignPtr SIedConnection -> String -> FunctionalConstraint -> IO MmsType
+mmsType :: IedConnection -> String -> FunctionalConstraint -> IO MmsType
 mmsType con path fc = do
   fMmsSpec <- mmsSpec con path fc
   MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType
 
+discover :: IedConnection -> IO [(String, FunctionalConstraint)]
 discover con = do
   ldevices <- logicalDevices con
   liftM msum $ forM ldevices $
@@ -206,4 +220,4 @@ discover con = do
                     \attribute -> do
                       let fullPath = attrPath ++ "." ++ attribute
                       let cleanPath = takeWhile (/= '[') fullPath
-                      return $ AttributeSpec cleanPath constraint
+                      return (cleanPath, constraint)

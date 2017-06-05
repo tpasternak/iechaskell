@@ -1,15 +1,14 @@
 module Main where
 
 import           Control.Monad
-import           Enums
-import           IedConnection
+import           Client
 
 simpleList = do
   con <- connect "localhost" 102
   x <- discover con
-  forM_ x $ \item -> do
-    val <- readVal con (ref item) (fc item)
-    putStr $ show item ++ " == "
+  forM_ x $ \(ref, fc) -> do
+    val <- readVal con ref fc
+    putStr $ ref ++ "[" ++ show fc ++ "]" ++ " == "
     print val
 
 main = simpleList

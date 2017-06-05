@@ -4,7 +4,7 @@ import           Control.Exception
 import           Data.Array
 import           Data.ByteString.Char8 hiding (head, putStr, putStrLn)
 import           Data.Int
-import           Enums
+import           Enums.Enums
 import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.ForeignPtr

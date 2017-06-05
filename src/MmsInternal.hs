@@ -1,4 +1,4 @@
-module MmsValue where
+module MmsInternal (fromCMmsVal, SMmsValue, SMmsVariableSpecification) where
 
 import           BitString
 import           Control.Exception
@@ -6,27 +6,19 @@ import           Control.Monad
 import           Data.Array
 import           Data.ByteString.Char8 hiding (head, putStr, putStrLn)
 import           Data.Int
-import           Enums
+import           Enums.Enums
+import           EnumsInternal
 import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.ForeignPtr
 import           Foreign.Marshal.Alloc
 import           Foreign.Ptr
 import           Foreign.Storable
+import           Mms
 
 data SMmsVariableSpecification
 
 data SMmsValue
-
-foreign import ccall unsafe
-               "iec61850_client.h MmsVariableSpecification_getType"
-               c_MmsVariableSpecification_getType ::
-               Ptr SMmsVariableSpecification -> IO CInt
-
-foreign import ccall unsafe
-               "iec61850_client.h &MmsVariableSpecification_destroy"
-               c_MmsVariableSpecification_destroy ::
-               FunPtr (Ptr SMmsVariableSpecification -> IO ())
 
 foreign import ccall unsafe "iec61850_client.h MmsValue_toString"
                c_MmsValue_toString :: Ptr SMmsValue -> IO CString
@@ -60,9 +52,6 @@ foreign import ccall unsafe
                "iec61850_client.h MmsValue_getBitStringAsInteger"
                c_MmsValue_getBitStringAsInteger :: Ptr SMmsValue -> IO CUint32
 
-foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
-               c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
-
 foreign import ccall unsafe "iec61850_client.h MmsValue_toDouble"
                c_MmsValue_toDouble :: Ptr SMmsValue -> IO CDouble
 
@@ -72,7 +61,7 @@ fromCMmsValUnsafe mmsVal = do
   type_ <- c_MmsValue_getType mmsVal
   case MmsType type_ of
     t
-      | t == mms_integer -> MmsInteger <$> c_MmsValue_toInt32 mmsVal
+      | t == mms_integer -> MmsInteger . fromIntegral <$> c_MmsValue_toInt32 mmsVal
       | t == mms_boolean -> MmsBoolean . (/= cFalse) <$> c_MmsValue_getBoolean mmsVal
       | t == mms_visible_string -> MmsVisibleString <$> (c_MmsValue_toString >=> peekCString) mmsVal
       | t == mms_bit_string -> MmsBitString . BitString . fromIntegral <$> c_MmsValue_getBitStringAsInteger
