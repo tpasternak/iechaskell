@@ -16,8 +16,8 @@ import           Control.Monad
 import           Data.ByteString.Char8 (pack, useAsCString)
 import           Data.Int
 import           Enums.AcsiClass
-import           Enums.Enums
 import           Enums.FC
+import           Enums.MmsType
 import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.ForeignPtr

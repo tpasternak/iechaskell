@@ -6,7 +6,7 @@ import           Control.Monad
 import           Data.Array
 import           Data.ByteString.Char8 hiding (head, putStr, putStrLn)
 import           Data.Int
-import           Enums.Enums
+import           Enums.MmsType
 import           EnumsInternal
 import           Foreign.C.String
 import           Foreign.C.Types
