@@ -1,8 +1,7 @@
 module Client (
-    IedConnection(),
-    logicalNodeDirectory,
     connect,
     logicalDevices,
+    logicalNodeDirectory,
     logicalNodes,
     logicalNodeVariables,
     dataObjectDirectory,
@@ -118,7 +117,11 @@ foreign import ccall unsafe
                Ptr SIedConnection ->
                  Ptr IedClientError -> CString -> CInt -> IO (Ptr SLinkedList)
 
-connect :: String -> Int32 -> IO IedConnection
+
+-- | Connect to an IED of the specified IP address and port
+connect :: String -- ^ IP address
+  -> Int32 -- ^ Port
+  -> IO IedConnection -- ^ IED connection handle
 connect host port = do
   rawCon <- c_IedConnectionCreate
   con <- newForeignPtr c_IedConnection_destroy rawCon
@@ -134,8 +137,6 @@ connect host port = do
         useAsCString (pack host) $ \str -> c_IedConnection_connect con err str (CInt port)
         peek err
 
-close con = withForeignPtr con c_IedConnection_close
-
 getStringListFromIed con fun =
   alloca $ \err -> do
     nodes <- withForeignPtr con (fun err)
@@ -145,6 +146,7 @@ getStringListFromIed con fun =
       0 -> linkedListToList nodesSafe
       _ -> throwIO (IedConnectionException errNo)
 
+-- | Get list of all logical nodes from the IED
 logicalDevices :: IedConnection -> IO [String]
 logicalDevices con =
   getStringListFromIed con (flip c_IedConnection_getLogicalDeviceList)
