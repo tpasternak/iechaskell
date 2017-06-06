@@ -1,4 +1,4 @@
-module EnumsInternal where
+module Iec61850.EnumsInternal where
 
 import Data.Word
 

@@ -1,20 +1,20 @@
-module MmsInternal (fromCMmsVal, SMmsValue, SMmsVariableSpecification) where
+module Iec61850.MmsInternal (fromCMmsVal, SMmsValue, SMmsVariableSpecification) where
 
-import           BitString
 import           Control.Exception
 import           Control.Monad
 import           Data.Array
-import           Data.ByteString.Char8 hiding (head, putStr, putStrLn)
+import           Data.ByteString.Char8  hiding (head, putStr, putStrLn)
 import           Data.Int
-import           Enums.MmsType
-import           EnumsInternal
 import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.ForeignPtr
 import           Foreign.Marshal.Alloc
 import           Foreign.Ptr
 import           Foreign.Storable
-import           Mms
+import           Iec61850.BitString
+import           Iec61850.Enums.MmsType
+import           Iec61850.EnumsInternal
+import           Iec61850.Mms
 
 data SMmsVariableSpecification
 

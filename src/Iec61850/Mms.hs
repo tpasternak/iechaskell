@@ -1,6 +1,6 @@
-module Mms where
+module Iec61850.Mms where
 
-import           BitString
+import           Iec61850.BitString
 
 data MmsVar = Array [MmsVar]
             | MmsStructure [MmsVar]

@@ -15,8 +15,8 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Enums.MmsType Enums.FC Enums.AcsiClass Client  BitString Mms
-  other-modules:       LinkedList MmsInternal EnumsInternal
+  exposed-modules:     Iec61850.Client Iec61850.Enums.FC Iec61850.Enums.AcsiClass Iec61850.BitString Iec61850.Mms Iec61850.Enums.MmsType 
+  other-modules:       Iec61850.LinkedList Iec61850.MmsInternal Iec61850.EnumsInternal
   build-depends:       base >= 4.7 && < 5
                      , array
                      , bytestring

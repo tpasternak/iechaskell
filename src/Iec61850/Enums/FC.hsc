@@ -1,4 +1,4 @@
-module Enums.FC
+module Iec61850.Enums.FC
 where
 import Prelude hiding (or,all)
 import Foreign.C.Types

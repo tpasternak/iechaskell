@@ -1,9 +1,9 @@
-module Enums.MmsType
+module Iec61850.Enums.MmsType
 where
 import Prelude hiding (or,all)
 import Foreign.C.Types
 import Data.Word
-import BitString
+import Iec61850.BitString
 
 #include "iec61850_client.h"
 

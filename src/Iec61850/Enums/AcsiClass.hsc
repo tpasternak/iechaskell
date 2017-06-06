@@ -1,4 +1,4 @@
-module Enums.AcsiClass
+module Iec61850.Enums.AcsiClass
 where
 import Prelude hiding (or,all)
 import Foreign.C.Types

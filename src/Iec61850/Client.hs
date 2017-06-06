@@ -1,4 +1,4 @@
-module Client (
+module Iec61850.Client (
     connect,
     logicalDevices,
     logicalNodeDirectory,
@@ -12,20 +12,20 @@ module Client (
 
 import           Control.Exception
 import           Control.Monad
-import           Data.ByteString.Char8 (pack, useAsCString)
+import           Data.ByteString.Char8    (pack, useAsCString)
 import           Data.Int
-import           Enums.AcsiClass
-import           Enums.FC
-import           Enums.MmsType
 import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.ForeignPtr
 import           Foreign.Marshal.Alloc
 import           Foreign.Ptr
 import           Foreign.Storable
-import           LinkedList
-import           Mms
-import           MmsInternal
+import           Iec61850.Enums.AcsiClass
+import           Iec61850.Enums.FC
+import           Iec61850.Enums.MmsType
+import           Iec61850.LinkedList
+import           Iec61850.Mms
+import           Iec61850.MmsInternal
 
 data SIedConnection
 
@@ -110,11 +110,10 @@ foreign import ccall unsafe
                Ptr SIedConnection ->
                  Ptr IedClientError -> CString -> CInt -> IO (Ptr SLinkedList)
 
-
 -- | Connect to an IED of the specified IP address and port
 connect :: String -- ^ IP address
-  -> Int32 -- ^ Port
-  -> IO IedConnection -- ^ IED connection handle
+        -> Int32 -- ^ Port
+        -> IO IedConnection -- ^ IED connection handle
 connect host port = do
   rawCon <- c_IedConnectionCreate
   con <- newForeignPtr c_IedConnection_destroy rawCon

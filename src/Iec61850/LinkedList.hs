@@ -1,4 +1,4 @@
-module LinkedList where
+module Iec61850.LinkedList where
 
 import           Control.Exception
 import           Data.Array

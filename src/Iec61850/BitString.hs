@@ -1,4 +1,4 @@
-module BitString where
+module Iec61850.BitString where
 
 import           Data.Bits
 import           Data.Int
