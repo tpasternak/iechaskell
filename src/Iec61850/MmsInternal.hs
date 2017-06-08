@@ -72,7 +72,7 @@ fromCMmsValUnsafe mmsVal = do
           alloca $ \usecPtr -> do
             msec <- c_MmsValue_getUtcTimeInMsWithUs mmsVal usecPtr
             usec <- peek usecPtr
-            return $ MmsUtcTime $ 1000 * fromIntegral msec + fromIntegral usec
+            return . MmsUtcTime $ 1000 * fromIntegral msec + fromIntegral usec
       | t == mms_structure -> do
           size <- fromIntegral <$> c_MmsValue_getArraySize mmsVal
           MmsStructure <$> forM [0 .. (size - 1)]

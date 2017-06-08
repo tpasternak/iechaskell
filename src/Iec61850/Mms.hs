@@ -1,5 +1,6 @@
 module Iec61850.Mms where
 
+import           Data.Int
 import           Iec61850.BitString
 
 data MmsVar = Array [MmsVar]
@@ -16,6 +17,6 @@ data MmsVar = Array [MmsVar]
             | MmsBcd
             | MmsObjId
             | MmsString String
-            | MmsUtcTime Int
+            | MmsUtcTime Int64
             | MmsUnknown String
   deriving (Show)
