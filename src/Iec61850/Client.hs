@@ -26,6 +26,7 @@ import           Iec61850.Enums.MmsType
 import           Iec61850.LinkedList
 import           Iec61850.Mms
 import           Iec61850.MmsInternal
+import           Data.List.Utils
 
 data SIedConnection
 
@@ -195,18 +196,12 @@ discover con = do
   liftM msum $ forM ldevices $
     \dev -> do
       nodes <- logicalNodes con dev
-      liftM msum $ forM nodes $
-        \node -> do
-          let nodeFull = dev ++ "/" ++ node
-          objects <- logicalNodeDirectory con nodeFull dataObject
-          liftM msum $ forM objects $
-            \object -> do
-              let attrPath = nodeFull ++ "." ++ object
-              liftM msum $ forM allConstraints $
-                \constraint -> do
-                  attributes <- dataObjectDirectoryByFC con attrPath constraint
-                  forM attributes $
-                    \attribute -> do
-                      let fullPath = attrPath ++ "." ++ attribute
-                      let cleanPath = takeWhile (/= '[') fullPath
-                      return (cleanPath, constraint)
+      liftM msum $ forM nodes $ \node-> do
+        let nodeRef = dev  ++ "/" ++ node
+        lnVars <- logicalNodeVariables con nodeRef
+        let lnVarsWithoutFC = filter ((>=3).length) lnVars
+        forM lnVarsWithoutFC $ \var -> do
+           let fc = readFC (take 2 var)
+           let varPath =  nodeRef ++ "." ++ (drop 3 var)
+           return (replace "$" "." varPath, fc)
+

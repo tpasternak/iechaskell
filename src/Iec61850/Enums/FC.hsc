@@ -54,6 +54,28 @@ instance Show FunctionalConstraint where
       | x == all = "ALL"
       | x == none = "NONE"
 
+readFC x
+      | x ==  "ST" = st 
+      | x ==  "MX" = mx 
+      | x ==  "SP" = sp 
+      | x ==  "SV" = sv 
+      | x ==  "CF" = cf 
+      | x ==  "DC" = dc 
+      | x ==  "SG" = sg 
+      | x ==  "SE" = se 
+      | x ==  "SR" = sr 
+      | x ==  "OR" = or 
+      | x ==  "BL" = bl 
+      | x ==  "EX" = ex 
+      | x ==  "CO" = co 
+      | x ==  "US" = us 
+      | x ==  "MS" = ms 
+      | x ==  "RP" = rp 
+      | x ==  "BR" = br 
+      | x ==  "LG" = lg 
+      | x ==  "ALL" = all
+      | x == "NONE" =none 
+
 allConstraints :: [FunctionalConstraint]
 allConstraints = [st, mx, sp, sv, cf, dc, sg, se, sr, or, bl, ex, co, us, ms, rp, br, lg]
 
