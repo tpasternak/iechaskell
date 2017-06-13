@@ -1,8 +1,8 @@
 import           Test.HUnit
 
 import           Data.List
-import           Data.List.Split
 import           Iec61850.BitString
+import           Iec61850.NameTree
 
 main = runTestTT tests
 
@@ -26,6 +26,9 @@ tests = TestList
           , TestLabel "buildNameTree2" buildNameTree2
           , TestLabel "buildNameTree3" buildNameTree3
           , TestLabel "buildNameTree4" buildNameTree4
+          , TestLabel "leavesPathsTest" leavesPathsTest
+          , TestLabel "leavesPathsTest2" leavesPathsTest2
+          , TestLabel "leavesPathsTest3" leavesPathsTest3                    
           ]
 
 buildNameTree1 = TestCase $ assertEqual "" [] (buildNameTree [])
@@ -37,25 +40,7 @@ buildNameTree3 = TestCase $ assertEqual "" [Node "MX" [Leaf "A1"]] (buildNameTre
 buildNameTree4 = TestCase $ assertEqual "" [(Node "MX" [Leaf "A1"]), Leaf "CX"]
                               (buildNameTree ["MX", "MX$A1", "CX"])
 
-data DiscoverStruct = Leaf String
-                    | Node String [DiscoverStruct]
-  deriving (Eq, Show)
+leavesPathsTest = TestCase $ assertEqual "" ["A.B"] $ leavesPaths [Node "A" [Leaf "B"]]
+leavesPathsTest2 = TestCase $ assertEqual "" ["C.D.E"] $ leavesPaths [Node "C" [Node "D" [ Leaf "E"]]]
+leavesPathsTest3 = TestCase $ assertEqual "" ["A.B", "C.D.E"] $ leavesPaths [Node "A" [Leaf "B"], Node "C" [Node "D" [ Leaf "E"]]]
 
-buildNameTreeH :: [[String]] -> [DiscoverStruct]
-buildNameTreeH split_ =
-  let roots = concat $ filter ((== 1) . length) split_
-      newTrees = map
-                   (\root -> let nextString = filter (\tree -> length tree >= 1 && root == head tree) split_
-                                 asn = if length nextString == 1
-                                         then Leaf root
-                                         else Node root (buildNameTreeH (drop 1 <$> nextString))
-                             in asn)
-                   roots
-  in newTrees
-
-buildNameTree :: [String] -> [DiscoverStruct]
-buildNameTree strings =
-  let split_ = map (splitOn "$") strings
-      s = buildNameTreeH split_
-  in s--
-      -- ["ST$Proxy$t","ST$Proxy$stVal","ST$Proxy$q","ST$Proxy","ST$PhyHealth$t","ST$PhyHealth$stVal","ST$PhyHealth$q","ST$PhyHealth","ST","DC$PhyNam$vendor","DC$PhyNam","DC"]

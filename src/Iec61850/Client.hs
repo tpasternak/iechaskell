@@ -26,6 +26,7 @@ import           Iec61850.Enums.MmsType
 import           Iec61850.LinkedList
 import           Iec61850.Mms
 import           Iec61850.MmsInternal
+import           Iec61850.NameTree
 import           Data.List.Utils
 
 data SIedConnection
@@ -199,7 +200,9 @@ discover con = do
       liftM msum $ forM nodes $ \node-> do
         let nodeRef = dev  ++ "/" ++ node
         lnVars <- logicalNodeVariables con nodeRef
-        let lnVarsWithoutFC = filter ((>=3).length) lnVars
+        let nameTree = buildNameTree lnVars
+        let leaves = leavesPaths nameTree
+        let lnVarsWithoutFC = filter ((>=3).length) leaves
         forM lnVarsWithoutFC $ \var -> do
            let fc = readFC (take 2 var)
            let varPath =  nodeRef ++ "." ++ (drop 3 var)
