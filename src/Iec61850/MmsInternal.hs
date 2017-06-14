@@ -80,7 +80,7 @@ fromCMmsValUnsafe mmsVal = do
                                 elem <- c_MmsValue_getElement mmsVal idx
                                 fromCMmsValUnsafe elem)
 
-    otherwise -> return $ MmsUnknown $ show $ MmsType type_
+    _ -> return $ MmsUnknown $ show $ MmsType type_
 
 data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }
   deriving (Show)

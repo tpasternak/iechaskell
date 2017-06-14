@@ -14,6 +14,7 @@ import           Control.Exception
 import           Control.Monad
 import           Data.ByteString.Char8    (pack, useAsCString)
 import           Data.Int
+import           Data.List.Utils
 import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.ForeignPtr
@@ -27,7 +28,6 @@ import           Iec61850.LinkedList
 import           Iec61850.Mms
 import           Iec61850.MmsInternal
 import           Iec61850.NameTree
-import           Data.List.Utils
 
 data SIedConnection
 
@@ -194,10 +194,10 @@ mmsType con path fc = do
 discover :: IedConnection -> IO [(String, FunctionalConstraint)]
 discover con = do
   ldevices <- logicalDevices con
-  liftM msum $ forM ldevices $
+  fmap msum $ forM ldevices $
     \dev -> do
       nodes <- logicalNodes con dev
-      liftM msum $ forM nodes $ \node-> do
+      fmap msum $ forM nodes $ \node-> do
         let nodeRef = dev  ++ "/" ++ node
         lnVars <- logicalNodeVariables con nodeRef
         let nameTree = buildNameTree lnVars
@@ -205,6 +205,6 @@ discover con = do
         let lnVarsWithoutFC = filter ((>=3).length) leaves
         forM lnVarsWithoutFC $ \var -> do
            let fc = readFC (take 2 var)
-           let varPath =  nodeRef ++ "." ++ (drop 3 var)
+           let varPath =  nodeRef ++ "." ++ drop 3 var
            return (replace "$" "." varPath, fc)
 

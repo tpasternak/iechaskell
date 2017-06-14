@@ -28,7 +28,7 @@ tests = TestList
           , TestLabel "buildNameTree4" buildNameTree4
           , TestLabel "leavesPathsTest" leavesPathsTest
           , TestLabel "leavesPathsTest2" leavesPathsTest2
-          , TestLabel "leavesPathsTest3" leavesPathsTest3                    
+          , TestLabel "leavesPathsTest3" leavesPathsTest3
           ]
 
 buildNameTree1 = TestCase $ assertEqual "" [] (buildNameTree [])
@@ -37,7 +37,7 @@ buildNameTree2 = TestCase $ assertEqual "" [Leaf "MX"] (buildNameTree ["MX"])
 
 buildNameTree3 = TestCase $ assertEqual "" [Node "MX" [Leaf "A1"]] (buildNameTree ["MX", "MX$A1"])
 
-buildNameTree4 = TestCase $ assertEqual "" [(Node "MX" [Leaf "A1"]), Leaf "CX"]
+buildNameTree4 = TestCase $ assertEqual "" [Node "MX" [Leaf "A1"], Leaf "CX"]
                               (buildNameTree ["MX", "MX$A1", "CX"])
 
 leavesPathsTest = TestCase $ assertEqual "" ["A.B"] $ leavesPaths [Node "A" [Leaf "B"]]

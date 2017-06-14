@@ -11,26 +11,26 @@ treeFromPathListH :: [[String]] -> [DiscoverStruct]
 treeFromPathListH split_ =
   let roots = concat $ filter ((== 1) . length) split_
       newTrees = map
-                   (\root -> let nextString = filter (\tree -> not (null tree) && root == head tree) split_
-                                 asn = if length nextString == 1
-                                         then Leaf root
-                                         else Node root (treeFromPathListH (drop 1 <$> nextString))
-                             in asn)
+                   (\root -> let stringsMatchingRoot = filter ((==root).head) split_
+                                 newStrings = filter (not . null) $ drop 1 <$> stringsMatchingRoot
+                             in if length stringsMatchingRoot == 1
+                                then Leaf root
+                                else Node root $ treeFromPathListH newStrings
+                   )
                    roots
   in newTrees
 
 buildNameTree :: [String] -> [DiscoverStruct]
-buildNameTree strings =
-  let split_ = map (splitOn "$") strings
-  in treeFromPathListH split_
+buildNameTree = treeFromPathListH . map (splitOn "$")
+
 
 
 leavesPaths :: [DiscoverStruct] -> [String]
-leavesPaths ds = leavesPaths' "" ds
+leavesPaths = leavesPaths' ""
   where
     leavesPaths' :: String -> [DiscoverStruct] -> [String]
-    leavesPaths' path ds = concat $ map (\str ->
+    leavesPaths' path = concatMap (\str ->
                                            case str of
                                              Leaf name -> [path ++ name]
-                                             Node name ds' -> leavesPaths' (path++name++".") ds') ds
+                                             Node name ds' -> leavesPaths' (path++name++".") ds')
 
