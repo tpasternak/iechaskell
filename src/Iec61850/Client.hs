@@ -167,19 +167,19 @@ dataObjectDirectoryByFC con lnode fc =
   useAsCString (pack lnode) $ \dev ->
     getStringListFromIed con
       (\err rawCon ->
-         c_IedConnection_getDataDirectoryByFC rawCon err dev (unFunctionalConstraint fc))
+         c_IedConnection_getDataDirectoryByFC rawCon err dev (toInt fc))
 
 readVal :: IedConnection -> String -> FunctionalConstraint -> IO MmsVar
 readVal con daReference fc =
   useAsCString (pack daReference) $ \p -> alloca $ \err -> do
-    mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (unFunctionalConstraint fc))
+    mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (toInt fc))
     safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
     fromCMmsVal safeMmsVal
 
 mmsSpec :: IedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
 mmsSpec con path fc =
   useAsCString (pack path) $ \p -> alloca $ \err -> do
-    mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (unFunctionalConstraint fc))
+    mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (toInt fc))
     fMmsSpec <- newForeignPtr c_MmsVariableSpecification_destroy mmsSpec
     errNo <- peek err
     case errNo of
