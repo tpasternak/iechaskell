@@ -71,6 +71,8 @@ fromInt x
       | x == rp_ = RP
       | x == br_ = BR
       | x == lg_ = LG
+      | x == all_ = ALL
+      | x == none_ = NONE
 
 toInt = unFunctionalConstraint . toInt'
 
@@ -93,6 +95,8 @@ toInt' x
       | x == RP = rp_  
       | x == BR = br_  
       | x == LG = lg_       
+      | x == ALL = all_
+      | x == NONE = none_
 
 readFC x
       | x ==  "ST" = ST 
@@ -114,7 +118,7 @@ readFC x
       | x ==  "BR" = BR 
       | x ==  "LG" = LG 
       | x ==  "ALL" = ALL
-      | x == "NONE" =NONE 
+      | x == "NONE" = NONE 
 
 allConstraints :: [FunctionalConstraint]
 allConstraints = [ST, MX, SP, SV, CF, DC, SG, SE, SR, OR, BL, EX, CO, US, MS, RP, BR, LG]
