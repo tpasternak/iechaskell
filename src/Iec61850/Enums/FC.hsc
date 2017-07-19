@@ -27,7 +27,7 @@ data FunctionalConstraint= ST
   | BR
   | LG
   | ALL
-  | NONE deriving(Show,Eq,Enum,Read)
+  | NONE deriving(Show,Eq,Enum,Read,Ord)
 
 #{enum FunctionalConstraint_,FunctionalConstraint_
 , st_ = IEC61850_FC_ST
