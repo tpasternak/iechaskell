@@ -80,7 +80,6 @@ fromCMmsValUnsafe mmsVal = do
       -> MmsVisibleString <$> (c_MmsValue_toString >=> peekCString) mmsVal
       | t == mms_bit_string
       ->  MmsBitString
-      .   BitString
       .   fromIntegral
       <$> c_MmsValue_getBitStringAsInteger mmsVal
       | t == mms_float

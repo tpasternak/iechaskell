@@ -1,12 +1,17 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Iec61850.Mms where
 
 import           Data.Int
+import           Data.Word
+import           Data.Data
+import           Data.Typeable
 import           Iec61850.BitString
 
 data MmsVar = Array [MmsVar]
             | MmsStructure [MmsVar]
             | MmsBoolean Bool
-            | MmsBitString BitString
+            | MmsBitString Word32
             | MmsInteger Int
             | MmsUnsigned Word
             | MmsFloat Double
@@ -19,4 +24,4 @@ data MmsVar = Array [MmsVar]
             | MmsString String
             | MmsUtcTime Int64
             | MmsUnknown String
-  deriving (Show)
+  deriving (Show, Read, Data, Typeable)
