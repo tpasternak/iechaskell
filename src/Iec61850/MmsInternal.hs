@@ -58,8 +58,13 @@ foreign import ccall unsafe "iec61850_client.h MmsValue_toDouble"
 foreign import ccall unsafe "iec61850_client.h MmsValue_newIntegerFromInt32"
                c_MmsValue_newIntegerFromInt32 :: CInt32 -> IO (Ptr SMmsValue)
 
+foreign import ccall unsafe "iec61850_client.h MmsValue_newDouble"
+               c_MmsValue_newDouble :: CDouble -> IO (Ptr SMmsValue)
+
 foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
                c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
+
+
 
 fromCMmsVal mmsVal = withForeignPtr mmsVal fromCMmsValUnsafe
 
@@ -67,24 +72,35 @@ fromCMmsValUnsafe mmsVal = do
   type_ <- c_MmsValue_getType mmsVal
   case MmsType type_ of
     t
-      | t == mms_integer -> MmsInteger . fromIntegral <$> c_MmsValue_toInt32 mmsVal
-      | t == mms_boolean -> MmsBoolean . (/= cFalse) <$> c_MmsValue_getBoolean mmsVal
-      | t == mms_visible_string -> MmsVisibleString <$> (c_MmsValue_toString >=> peekCString) mmsVal
-      | t == mms_bit_string -> MmsBitString . BitString . fromIntegral <$> c_MmsValue_getBitStringAsInteger
-                                                                             mmsVal
-      | t == mms_float -> MmsFloat . realToFrac <$> c_MmsValue_toDouble mmsVal
-      | t == mms_unsigned -> MmsUnsigned . fromIntegral <$> c_MmsValue_toUint32 mmsVal
-      | t == mms_utc_time ->
-          alloca $ \usecPtr -> do
-            msec <- c_MmsValue_getUtcTimeInMsWithUs mmsVal usecPtr
-            usec <- peek usecPtr
-            return . MmsUtcTime $ 1000 * fromIntegral msec + fromIntegral usec
-      | t == mms_structure -> do
-          size <- fromIntegral <$> c_MmsValue_getArraySize mmsVal
-          MmsStructure <$> forM [0 .. (size - 1)]
-                             (\idx -> do
-                                elem <- c_MmsValue_getElement mmsVal idx
-                                fromCMmsValUnsafe elem)
+      | t == mms_integer
+      -> MmsInteger . fromIntegral <$> c_MmsValue_toInt32 mmsVal
+      | t == mms_boolean
+      -> MmsBoolean . (/=cFalse) <$> c_MmsValue_getBoolean mmsVal
+      | t == mms_visible_string
+      -> MmsVisibleString <$> (c_MmsValue_toString >=> peekCString) mmsVal
+      | t == mms_bit_string
+      ->  MmsBitString
+      .   BitString
+      .   fromIntegral
+      <$> c_MmsValue_getBitStringAsInteger mmsVal
+      | t == mms_float
+      -> MmsFloat . realToFrac <$> c_MmsValue_toDouble mmsVal
+      | t == mms_unsigned
+      -> MmsUnsigned . fromIntegral <$> c_MmsValue_toUint32 mmsVal
+      | t == mms_utc_time
+      -> alloca $ \usecPtr -> do
+        msec <- c_MmsValue_getUtcTimeInMsWithUs mmsVal usecPtr
+        usec <- peek usecPtr
+        return . MmsUtcTime $ 1000 * fromIntegral msec + fromIntegral usec
+      | t == mms_structure
+      -> do
+        size <- fromIntegral <$> c_MmsValue_getArraySize mmsVal
+        MmsStructure <$> forM
+          [0 .. (size - 1)]
+          ( \idx -> do
+            elem <- c_MmsValue_getElement mmsVal idx
+            fromCMmsValUnsafe elem
+          )
 
     _ -> return $ MmsUnknown $ show $ MmsType type_
 
@@ -97,6 +113,9 @@ toSMmsValue v = do
   newForeignPtr c_MmsValue_delete x
 
 toSMmsValueUnsafe :: MmsVar -> IO (Ptr SMmsValue)
-toSMmsValueUnsafe (MmsInteger i) = c_MmsValue_newIntegerFromInt32 (fromIntegral i)
-toSMmsValueUnsafe _ = undefined
+toSMmsValueUnsafe (MmsInteger i) =
+  c_MmsValue_newIntegerFromInt32 (fromIntegral i)
+toSMmsValueUnsafe (MmsFloat i) = c_MmsValue_newDouble (realToFrac i)
+toSMmsValueUnsafe _            = undefined
+
 
