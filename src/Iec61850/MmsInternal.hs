@@ -1,4 +1,4 @@
-module Iec61850.MmsInternal (fromCMmsVal, SMmsValue, SMmsVariableSpecification) where
+module Iec61850.MmsInternal (fromCMmsVal, SMmsValue, SMmsVariableSpecification, toSMmsValue) where
 
 import           Control.Exception
 import           Control.Monad
@@ -55,6 +55,12 @@ foreign import ccall unsafe
 foreign import ccall unsafe "iec61850_client.h MmsValue_toDouble"
                c_MmsValue_toDouble :: Ptr SMmsValue -> IO CDouble
 
+foreign import ccall unsafe "iec61850_client.h MmsValue_newIntegerFromInt32"
+               c_MmsValue_newIntegerFromInt32 :: CInt32 -> IO (Ptr SMmsValue)
+
+foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
+               c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
+
 fromCMmsVal mmsVal = withForeignPtr mmsVal fromCMmsValUnsafe
 
 fromCMmsValUnsafe mmsVal = do
@@ -84,3 +90,13 @@ fromCMmsValUnsafe mmsVal = do
 
 data MmsVarSpec = MmsVarSpec { varName :: String, varType :: MmsType }
   deriving (Show)
+
+toSMmsValue :: MmsVar -> IO (ForeignPtr SMmsValue)
+toSMmsValue v = do
+  x <- toSMmsValueUnsafe v
+  newForeignPtr c_MmsValue_delete x
+
+toSMmsValueUnsafe :: MmsVar -> IO (Ptr SMmsValue)
+toSMmsValueUnsafe (MmsInteger i) = c_MmsValue_newIntegerFromInt32 (fromIntegral i)
+toSMmsValueUnsafe _ = undefined
+

@@ -6,6 +6,7 @@ module Iec61850.Client (
     logicalNodeVariables,
     dataObjectDirectoryByFC,
     readVal,
+    writeVal,
     mmsType,
     discover,
     ) where
@@ -112,6 +113,10 @@ foreign import ccall unsafe
                Ptr SIedConnection ->
                  Ptr IedClientError -> CString -> CInt -> IO (Ptr SLinkedList)
 
+foreign import ccall unsafe
+               "iec61850_client.h IedConnection_writeObject"
+               c_IedConnection_writeObject :: Ptr SIedConnection -> Ptr IedClientError -> CString -> CInt -> Ptr SMmsValue -> IO ()
+
 -- | Connect to an IED of the specified IP address and port
 connect :: String -- ^ IP address
         -> Int32 -- ^ Port
@@ -208,3 +213,15 @@ discover con = do
            let varPath =  nodeRef ++ "." ++ drop 3 var
            return (replace "$" "." varPath, fc)
 
+writeVal :: IedConnection -> String -> FunctionalConstraint -> MmsVar -> IO ()
+writeVal con daReference fc v = do
+  useAsCString (pack daReference) $
+    \p -> alloca $ \err -> do
+      rawVal <- toSMmsValue v
+      withForeignPtr rawVal $ \x -> do
+        withForeignPtr con $ \rawCon ->
+          c_IedConnection_writeObject rawCon err p (toInt fc) x
+        errNo <- peek err
+        case errNo of
+          0 -> return ()
+          _ -> throwIO (IedConnectionException errNo)
