@@ -58,8 +58,8 @@ foreign import ccall unsafe "iec61850_client.h MmsValue_toDouble"
 foreign import ccall unsafe "iec61850_client.h MmsValue_newIntegerFromInt32"
                c_MmsValue_newIntegerFromInt32 :: CInt32 -> IO (Ptr SMmsValue)
 
-foreign import ccall unsafe "iec61850_client.h MmsValue_newDouble"
-               c_MmsValue_newDouble :: CDouble -> IO (Ptr SMmsValue)
+foreign import ccall unsafe "iec61850_client.h MmsValue_newFloat"
+               c_MmsValue_newFloat :: CFloat -> IO (Ptr SMmsValue)
 
 foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
                c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
@@ -114,7 +114,7 @@ toSMmsValue v = do
 toSMmsValueUnsafe :: MmsVar -> IO (Ptr SMmsValue)
 toSMmsValueUnsafe (MmsInteger i) =
   c_MmsValue_newIntegerFromInt32 (fromIntegral i)
-toSMmsValueUnsafe (MmsFloat i) = c_MmsValue_newDouble (realToFrac i)
+toSMmsValueUnsafe (MmsFloat i) = c_MmsValue_newFloat (realToFrac i)
 toSMmsValueUnsafe _            = undefined
 
 
