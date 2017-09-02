@@ -15,6 +15,7 @@ module Iec61850.Client (
 import           Control.Exception
 import           Data.Either.Utils(fromRight)
 import           Control.Monad
+import           Control.Monad.Except
 import           Data.ByteString.Char8    (pack, useAsCString)
 import           Data.Int
 import           Data.List.Utils
@@ -31,6 +32,8 @@ import           Iec61850.LinkedList
 import           Iec61850.Mms
 import           Iec61850.MmsInternal
 import           Iec61850.NameTree
+
+type LengthMonad = ExceptT String IO
 
 data SIedConnection
 
@@ -123,14 +126,14 @@ foreign import ccall unsafe
 connect
   :: String -- ^ IP address
   -> Int32 -- ^ Port
-  -> IO (Either String IedConnection) -- ^ IED connection handle
+  -> LengthMonad IedConnection -- ^ IED connection handle
 connect host port = do
-  rawCon <- c_IedConnectionCreate
-  con    <- newForeignPtr c_IedConnection_destroy rawCon
-  e      <- iedConnectionConnect rawCon host port
+  rawCon <- liftIO $ c_IedConnectionCreate
+  con    <- liftIO $ newForeignPtr c_IedConnection_destroy rawCon
+  e      <- liftIO $ iedConnectionConnect rawCon host port
   case e of
-    0 -> return $ Right con
-    _ -> return $ Left (show e)
+    0 -> return con
+    _ -> throwError (show e)
  where
   iedConnectionConnect
     :: Ptr SIedConnection -> String -> Int32 -> IO IedClientError

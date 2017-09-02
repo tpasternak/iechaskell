@@ -23,6 +23,7 @@ library
                      , bytestring
                      , split
                      , MissingH
+                     , mtl
   extra-libraries:     iec61850 pthread
   default-language:    Haskell2010
 
@@ -33,6 +34,7 @@ executable demo1
   build-depends:       base
                      , haskell61850
                      , MissingH
+                     , mtl
   default-language:    Haskell2010
 
 executable demo2
@@ -42,6 +44,7 @@ executable demo2
   build-depends:       base
                      , haskell61850
                      , MissingH
+                     , mtl
   default-language:    Haskell2010
 
 test-suite haskell61850-test
