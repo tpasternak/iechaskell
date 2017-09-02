@@ -139,56 +139,95 @@ connect host port = do
       $ \str -> c_IedConnection_connect con err str (CInt port)
     peek err
 
-getStringListFromIed con fun = alloca $ \err -> do
-  nodes     <- withForeignPtr con (fun err)
+-- | Get list of all logical nodes from the IED
+logicalDevices :: IedConnection -> IO (Either String [String])
+logicalDevices con = alloca $ \err -> do
+  nodes <- withForeignPtr con ((flip c_IedConnection_getLogicalDeviceList) err)
   nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
-  errNo     <- peek err
+  errNo <- peek err
   case errNo of
     0 -> do
       x <- linkedListToList nodesSafe
       return $ Right x
     _ -> return $ Left $ show errNo
 
--- | Get list of all logical nodes from the IED
-logicalDevices :: IedConnection -> IO (Either String [String])
-logicalDevices con =
-  getStringListFromIed con (flip c_IedConnection_getLogicalDeviceList)
-
 logicalNodes :: IedConnection -> String -> IO (Either String [String])
-logicalNodes con device = useAsCString (pack device) $ \dev ->
-  getStringListFromIed
-    con
-    (\err rawCon -> c_IedConnection_getLogicalDeviceDirectory rawCon err dev)
+logicalNodes con device =
+  useAsCString (pack device) $ \dev -> alloca $ \err -> do
+    nodes <- withForeignPtr
+      con
+      ( ( \err rawCon ->
+          c_IedConnection_getLogicalDeviceDirectory rawCon err dev
+        )
+        err
+      )
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
+    errNo     <- peek err
+    case errNo of
+      0 -> do
+        x <- linkedListToList nodesSafe
+        return $ Right x
+      _ -> return $ Left $ show errNo
 
 logicalNodeVariables :: IedConnection -> String -> IO (Either String [String])
-logicalNodeVariables con lnode = useAsCString (pack lnode) $ \dev ->
-  getStringListFromIed
-    con
-    (\err rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
+logicalNodeVariables con lnode =
+  useAsCString (pack lnode) $ \dev -> alloca $ \err -> do
+    nodes <- withForeignPtr
+      con
+      ( (\err rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
+        err
+      )
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
+    errNo     <- peek err
+    case errNo of
+      0 -> do
+        x <- linkedListToList nodesSafe
+        return $ Right x
+      _ -> return $ Left $ show errNo
 
 logicalNodeDirectory
   :: IedConnection -> String -> AcsiClass -> IO (Either String [String])
-logicalNodeDirectory con lnode acsiClass = useAsCString (pack lnode) $ \dev ->
-  getStringListFromIed
-    con
-    ( \err rawCon -> c_IedConnection_getLogicalNodeDirectory
-      rawCon
-      err
-      dev
-      (unAcsiClass acsiClass)
-    )
+logicalNodeDirectory con lnode acsiClass =
+  useAsCString (pack lnode) $ \dev -> alloca $ \err -> do
+    nodes <- withForeignPtr
+      con
+      ( ( \err rawCon -> c_IedConnection_getLogicalNodeDirectory
+          rawCon
+          err
+          dev
+          (unAcsiClass acsiClass)
+        )
+        err
+      )
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
+    errNo     <- peek err
+    case errNo of
+      0 -> do
+        x <- linkedListToList nodesSafe
+        return $ Right x
+      _ -> return $ Left $ show errNo
 
 dataObjectDirectoryByFC
   :: IedConnection
   -> String
   -> FunctionalConstraint
   -> IO (Either String [String])
-dataObjectDirectoryByFC con lnode fc = useAsCString (pack lnode) $ \dev ->
-  getStringListFromIed
-    con
-    ( \err rawCon ->
-      c_IedConnection_getDataDirectoryByFC rawCon err dev (toInt fc)
-    )
+dataObjectDirectoryByFC con lnode fc =
+  useAsCString (pack lnode) $ \dev -> alloca $ \err -> do
+    nodes <- withForeignPtr
+      con
+      ( ( \err rawCon ->
+          c_IedConnection_getDataDirectoryByFC rawCon err dev (toInt fc)
+        )
+        err
+      )
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
+    errNo     <- peek err
+    case errNo of
+      0 -> do
+        x <- linkedListToList nodesSafe
+        return $ Right x
+      _ -> return $ Left $ show errNo
 
 readVal :: IedConnection -> String -> FunctionalConstraint -> IO MmsVar
 readVal con daReference fc =
