@@ -143,20 +143,25 @@ connect host port = do
     peek err
 
 -- | Get list of all logical nodes from the IED
-logicalDevices :: IedConnection -> IO (Either String [String])
-logicalDevices con = alloca $ \err -> do
-  nodes <- withForeignPtr con ((flip c_IedConnection_getLogicalDeviceList) err)
-  nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
-  errNo <- peek err
-  case errNo of
-    0 -> do
-      x <- linkedListToList nodesSafe
-      return $ Right x
-    _ -> return $ Left $ show errNo
+logicalDevices :: IedConnection -> LengthMonad [String]
+logicalDevices con = do
+  x <- liftIO $ alloca $ \err -> do
+    nodes <- withForeignPtr con
+                            ((flip c_IedConnection_getLogicalDeviceList) err)
+    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
+    errNo     <- peek err
+    case errNo of
+      0 -> do
+        x <- linkedListToList nodesSafe
+        return $ Right x
+      _ -> return $ Left $ show errNo
+  case x of
+    Right r -> return r
+    Left  l -> throwError l
 
-logicalNodes :: IedConnection -> String -> IO (Either String [String])
-logicalNodes con device =
-  useAsCString (pack device) $ \dev -> alloca $ \err -> do
+logicalNodes :: IedConnection -> String -> LengthMonad [String]
+logicalNodes con device = do
+  x <- liftIO $ useAsCString (pack device) $ \dev -> alloca $ \err -> do
     nodes <- withForeignPtr
       con
       ( ( \err rawCon ->
@@ -171,10 +176,15 @@ logicalNodes con device =
         x <- linkedListToList nodesSafe
         return $ Right x
       _ -> return $ Left $ show errNo
+  case x of
+    Right r -> return r
+    Left  l -> throwError l
 
-logicalNodeVariables :: IedConnection -> String -> IO (Either String [String])
-logicalNodeVariables con lnode =
-  useAsCString (pack lnode) $ \dev -> alloca $ \err -> do
+
+
+logicalNodeVariables :: IedConnection -> String -> LengthMonad [String]
+logicalNodeVariables con lnode = do
+  x <- liftIO $ useAsCString (pack lnode) $ \dev -> alloca $ \err -> do
     nodes <- withForeignPtr
       con
       ( (\err rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
@@ -187,6 +197,9 @@ logicalNodeVariables con lnode =
         x <- linkedListToList nodesSafe
         return $ Right x
       _ -> return $ Left $ show errNo
+  case x of
+    Right r -> return r
+    Left  l -> throwError l
 
 logicalNodeDirectory
   :: IedConnection -> String -> AcsiClass -> IO (Either String [String])
@@ -265,12 +278,12 @@ mmsType con path fc = do
 
 discover :: IedConnection -> IO [(String, FunctionalConstraint)]
 discover con = do
-  ldevices <- fromRight <$> logicalDevices con
+  ldevices <- fromRight <$> runExceptT (logicalDevices con)
   fmap msum $ forM ldevices $ \dev -> do
-    nodes <- fromRight <$> logicalNodes con dev
+    nodes <- fromRight <$> runExceptT (logicalNodes con dev)
     fmap msum $ forM nodes $ \node -> do
       let nodeRef = dev ++ "/" ++ node
-      lnVars <- fromRight <$> logicalNodeVariables con nodeRef
+      lnVars <- fromRight <$> runExceptT (logicalNodeVariables con nodeRef)
       let nameTree = buildNameTree lnVars
       let leaves   = leavesPaths nameTree
       return $ fmap (varNameToIdentityPair nodeRef) leaves
