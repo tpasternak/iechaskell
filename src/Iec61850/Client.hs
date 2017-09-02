@@ -1,3 +1,4 @@
+
 module Iec61850.Client (
     connect,
     logicalDevices,
@@ -12,6 +13,7 @@ module Iec61850.Client (
     ) where
 
 import           Control.Exception
+import           Data.Either.Utils(fromRight)
 import           Control.Monad
 import           Data.ByteString.Char8    (pack, useAsCString)
 import           Data.Int
@@ -36,7 +38,7 @@ type IedConnection = ForeignPtr SIedConnection
 
 type IedClientError = CInt
 
-data IedConnectionException = IedConnectionException CInt
+newtype IedConnectionException = IedConnectionException CInt
   deriving (Show)
 
 instance Exception IedConnectionException
@@ -118,78 +120,101 @@ foreign import ccall unsafe
                c_IedConnection_writeObject :: Ptr SIedConnection -> Ptr IedClientError -> CString -> CInt -> Ptr SMmsValue -> IO ()
 
 -- | Connect to an IED of the specified IP address and port
-connect :: String -- ^ IP address
-        -> Int32 -- ^ Port
-        -> IO IedConnection -- ^ IED connection handle
+connect
+  :: String -- ^ IP address
+  -> Int32 -- ^ Port
+  -> IO (Either String IedConnection) -- ^ IED connection handle
 connect host port = do
   rawCon <- c_IedConnectionCreate
-  con <- newForeignPtr c_IedConnection_destroy rawCon
-  e <- iedConnectionConnect rawCon host port
+  con    <- newForeignPtr c_IedConnection_destroy rawCon
+  e      <- iedConnectionConnect rawCon host port
   case e of
-    0 -> return con
-    _ -> throwIO (IedConnectionException e)
+    0 -> return $ Right con
+    _ -> return $ Left (show e)
+ where
+  iedConnectionConnect
+    :: Ptr SIedConnection -> String -> Int32 -> IO IedClientError
+  iedConnectionConnect con host port = alloca $ \err -> do
+    useAsCString (pack host)
+      $ \str -> c_IedConnection_connect con err str (CInt port)
+    peek err
 
-  where
-    iedConnectionConnect :: Ptr SIedConnection -> String -> Int32 -> IO IedClientError
-    iedConnectionConnect con host port =
-      alloca $ \err -> do
-        useAsCString (pack host) $ \str -> c_IedConnection_connect con err str (CInt port)
-        peek err
-
-getStringListFromIed con fun =
-  alloca $ \err -> do
-    nodes <- withForeignPtr con (fun err)
-    nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
-    errNo <- peek err
-    case errNo of
-      0 -> linkedListToList nodesSafe
-      _ -> throwIO (IedConnectionException errNo)
+getStringListFromIed con fun = alloca $ \err -> do
+  nodes     <- withForeignPtr con (fun err)
+  nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
+  errNo     <- peek err
+  case errNo of
+    0 -> do
+      x <- linkedListToList nodesSafe
+      return $ Right x
+    _ -> return $ Left $ show errNo
 
 -- | Get list of all logical nodes from the IED
-logicalDevices :: IedConnection -> IO [String]
+logicalDevices :: IedConnection -> IO (Either String [String])
 logicalDevices con =
   getStringListFromIed con (flip c_IedConnection_getLogicalDeviceList)
 
-logicalNodes :: IedConnection -> String -> IO [String]
-logicalNodes con device =
-  useAsCString (pack device) $ \dev ->
-    getStringListFromIed con
-      (\err rawCon -> c_IedConnection_getLogicalDeviceDirectory rawCon err dev)
+logicalNodes :: IedConnection -> String -> IO (Either String [String])
+logicalNodes con device = useAsCString (pack device) $ \dev ->
+  getStringListFromIed
+    con
+    (\err rawCon -> c_IedConnection_getLogicalDeviceDirectory rawCon err dev)
 
-logicalNodeVariables :: IedConnection -> String -> IO [String]
-logicalNodeVariables con lnode =
-  useAsCString (pack lnode) $ \dev ->
-    getStringListFromIed con (\err rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
+logicalNodeVariables :: IedConnection -> String -> IO (Either String [String])
+logicalNodeVariables con lnode = useAsCString (pack lnode) $ \dev ->
+  getStringListFromIed
+    con
+    (\err rawCon -> c_IedConnection_getLogicalNodeVariables rawCon err dev)
 
-logicalNodeDirectory :: IedConnection -> String -> AcsiClass -> IO [String]
-logicalNodeDirectory con lnode acsiClass =
-  useAsCString (pack lnode) $ \dev ->
-    getStringListFromIed con
-      (\err rawCon -> c_IedConnection_getLogicalNodeDirectory rawCon err dev (unAcsiClass acsiClass))
+logicalNodeDirectory
+  :: IedConnection -> String -> AcsiClass -> IO (Either String [String])
+logicalNodeDirectory con lnode acsiClass = useAsCString (pack lnode) $ \dev ->
+  getStringListFromIed
+    con
+    ( \err rawCon -> c_IedConnection_getLogicalNodeDirectory
+      rawCon
+      err
+      dev
+      (unAcsiClass acsiClass)
+    )
 
-dataObjectDirectoryByFC :: IedConnection -> String -> FunctionalConstraint -> IO [String]
-dataObjectDirectoryByFC con lnode fc =
-  useAsCString (pack lnode) $ \dev ->
-    getStringListFromIed con
-      (\err rawCon ->
-         c_IedConnection_getDataDirectoryByFC rawCon err dev (toInt fc))
+dataObjectDirectoryByFC
+  :: IedConnection
+  -> String
+  -> FunctionalConstraint
+  -> IO (Either String [String])
+dataObjectDirectoryByFC con lnode fc = useAsCString (pack lnode) $ \dev ->
+  getStringListFromIed
+    con
+    ( \err rawCon ->
+      c_IedConnection_getDataDirectoryByFC rawCon err dev (toInt fc)
+    )
 
 readVal :: IedConnection -> String -> FunctionalConstraint -> IO MmsVar
 readVal con daReference fc =
   useAsCString (pack daReference) $ \p -> alloca $ \err -> do
-    mmsVal <- withForeignPtr con (\rawCon -> c_IedConnection_readObject rawCon err p (toInt fc))
+    mmsVal <- withForeignPtr
+      con
+      (\rawCon -> c_IedConnection_readObject rawCon err p (toInt fc))
     safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
     fromCMmsVal safeMmsVal
 
-mmsSpec :: IedConnection -> String -> FunctionalConstraint -> IO (ForeignPtr SMmsVariableSpecification)
-mmsSpec con path fc =
-  useAsCString (pack path) $ \p -> alloca $ \err -> do
-    mmsSpec <- withForeignPtr con (\rawCon -> c_IedConnection_getVariableSpecification rawCon err p (toInt fc))
-    fMmsSpec <- newForeignPtr c_MmsVariableSpecification_destroy mmsSpec
-    errNo <- peek err
-    case errNo of
-      0 -> return fMmsSpec
-      _ -> throwIO (IedConnectionException errNo)
+mmsSpec
+  :: IedConnection
+  -> String
+  -> FunctionalConstraint
+  -> IO (ForeignPtr SMmsVariableSpecification)
+mmsSpec con path fc = useAsCString (pack path) $ \p -> alloca $ \err -> do
+  mmsSpec <- withForeignPtr
+    con
+    ( \rawCon ->
+      c_IedConnection_getVariableSpecification rawCon err p (toInt fc)
+    )
+  fMmsSpec <- newForeignPtr c_MmsVariableSpecification_destroy mmsSpec
+  errNo    <- peek err
+  case errNo of
+    0 -> return fMmsSpec
+    _ -> throwIO (IedConnectionException errNo)
 
 mmsType :: IedConnection -> String -> FunctionalConstraint -> IO MmsType
 mmsType con path fc = do
@@ -198,30 +223,34 @@ mmsType con path fc = do
 
 discover :: IedConnection -> IO [(String, FunctionalConstraint)]
 discover con = do
-  ldevices <- logicalDevices con
-  fmap msum $ forM ldevices $
-    \dev -> do
-      nodes <- logicalNodes con dev
-      fmap msum $ forM nodes $ \node-> do
-        let nodeRef = dev  ++ "/" ++ node
-        lnVars <- logicalNodeVariables con nodeRef
-        let nameTree = buildNameTree lnVars
-        let leaves = leavesPaths nameTree
-        let lnVarsWithoutFC = filter ((>=3).length) leaves
-        forM lnVarsWithoutFC $ \var -> do
-           let fc = readFC (take 2 var)
-           let varPath =  nodeRef ++ "." ++ drop 3 var
-           return (replace "$" "." varPath, fc)
+  ldevices <- fromRight <$> logicalDevices con
+  fmap msum $ forM ldevices $ \dev -> do
+    nodes <- fromRight <$> logicalNodes con dev
+    fmap msum $ forM nodes $ \node -> do
+      let nodeRef = dev ++ "/" ++ node
+      lnVars <- fromRight <$> logicalNodeVariables con nodeRef
+      let nameTree = buildNameTree lnVars
+      let leaves   = leavesPaths nameTree
+      return $ fmap (varNameToIdentityPair nodeRef) leaves
+ where
+  varNameToIdentityPair logicalNodeRef varName =
+    let fc      = readFC (take 2 varName)
+        varPath = logicalNodeRef ++ "." ++ drop 3 varName
+    in  (replace "$" "." varPath, fc)
 
-writeVal :: IedConnection -> String -> FunctionalConstraint -> MmsVar -> IO ()
-writeVal con daReference fc v = do
-  useAsCString (pack daReference) $
-    \p -> alloca $ \err -> do
-      rawVal <- toSMmsValue v
-      withForeignPtr rawVal $ \x -> do
-        withForeignPtr con $ \rawCon ->
-          c_IedConnection_writeObject rawCon err p (toInt fc) x
-        errNo <- peek err
-        case errNo of
-          0 -> return ()
-          _ -> throwIO (IedConnectionException errNo)
+writeVal
+  :: IedConnection
+  -> String
+  -> FunctionalConstraint
+  -> MmsVar
+  -> IO (Either String ())
+writeVal con daReference fc v =
+  useAsCString (pack daReference) $ \p -> alloca $ \err -> do
+    rawVal <- toSMmsValue v
+    withForeignPtr rawVal $ \x -> do
+      withForeignPtr con
+        $ \rawCon -> c_IedConnection_writeObject rawCon err p (toInt fc) x
+      errNo <- peek err
+      case errNo of
+        0 -> return $ Right ()
+        _ -> return $ Left $ "Error while writing: '" ++ daReference ++ "'"
