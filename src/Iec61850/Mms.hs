@@ -6,6 +6,7 @@ import           Data.Int
 import           Data.Word
 import           Data.Data
 import           Data.Typeable
+import           Iec61850.EnumsInternal
 import           Iec61850.BitString
 
 data MmsVar = Array [MmsVar]
@@ -13,7 +14,7 @@ data MmsVar = Array [MmsVar]
             | MmsBoolean Bool
             | MmsBitString Word32
             | MmsInteger Int
-            | MmsUnsigned Word
+            | MmsUnsigned CUint32
             | MmsFloat Double
             | MmsOctetString
             | MmsVisibleString String
