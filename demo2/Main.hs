@@ -1,7 +1,6 @@
 import Iec61850.Client
 import Iec61850.Mms
 import Iec61850.Enums.FC
-import Data.Either.Utils(fromRight)
 import Control.Monad.Except(runExceptT)
 import System.IO(stderr,hPutStr)
 
@@ -14,7 +13,7 @@ main = do
   connection <- runExceptT $ connect "localhost" 102
   case connection of
     Right con -> do
-      x <-writeVal con path fc val
+      x <- runExceptT (writeVal con path fc val)
       case x of
         Right _ -> putStrLn "success"
         Left err -> putStrLn $ "Error: '" ++ show err ++ "'"

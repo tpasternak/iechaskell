@@ -13,7 +13,7 @@ simpleList = do
     Right con -> do
       x <- fromRight <$> runExceptT (discover con)
       forM_ x $ \(ref, fc) -> do
-        val <- readVal con ref fc
+        val <- fromRight <$> runExceptT (readVal con ref fc)
         putStr $ ref ++ "[" ++ show fc ++ "]" ++ " == " ++ show (toConstr val) ++ ": "
         print val
     Left err -> hPutStr stderr err

@@ -10,6 +10,7 @@ module Iec61850.Client (
     writeVal,
     mmsType,
     discover,
+    IedMonad,
     ) where
 
 import           Control.Exception
@@ -245,14 +246,23 @@ dataObjectDirectoryByFC con lnode fc =
         return $ Right x
       _ -> return $ Left $ show errNo
 
-readVal :: IedConnection -> String -> FunctionalConstraint -> IO MmsVar
-readVal con daReference fc =
-  useAsCString (pack daReference) $ \p -> alloca $ \err -> do
+readVal :: IedConnection -> String -> FunctionalConstraint -> IedMonad MmsVar
+readVal con daReference fc = do
+  x <- liftIO $ useAsCString (pack daReference) $ \p -> alloca $ \err -> do
     mmsVal <- withForeignPtr
       con
       (\rawCon -> c_IedConnection_readObject rawCon err p (toInt fc))
-    safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
-    fromCMmsVal safeMmsVal
+    errNo <- peek err
+    case errNo of
+      0 -> do
+        safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
+        x <- fromCMmsVal safeMmsVal
+        return $ Right x
+      _ -> return $ Left $  "Error while reading field variable: '" ++ daReference ++ "["
+           ++ show fc ++  "]' Errno=" ++ show errNo
+  case x of
+    Right r -> return r
+    Left  l -> throwError l
 
 mmsSpec
   :: IedConnection
@@ -298,9 +308,9 @@ writeVal
   -> String
   -> FunctionalConstraint
   -> MmsVar
-  -> IO (Either String ())
-writeVal con daReference fc v =
-  useAsCString (pack daReference) $ \p -> alloca $ \err -> do
+  -> IedMonad ()
+writeVal con daReference fc v = do
+  x <- liftIO $ useAsCString (pack daReference) $ \p -> alloca $ \err -> do
     rawVal <- toSMmsValue v
     withForeignPtr rawVal $ \x -> do
       withForeignPtr con
@@ -308,4 +318,8 @@ writeVal con daReference fc v =
       errNo <- peek err
       case errNo of
         0 -> return $ Right ()
-        _ -> return $ Left $ "Error while writing: '" ++ daReference ++ "'"
+        _ -> return $ Left $ "Error while writing: '" ++ daReference ++ "'; ErrNo='" ++ (show errNo) ++ "'"
+  case x of
+    Right r -> return r
+    Left l -> throwError l
+
