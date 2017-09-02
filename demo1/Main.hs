@@ -11,7 +11,7 @@ simpleList = do
   connection <- runExceptT $ connect "localhost" 102
   case connection of
     Right con -> do
-      x <-  discover con
+      x <- fromRight <$> runExceptT (discover con)
       forM_ x $ \(ref, fc) -> do
         val <- readVal con ref fc
         putStr $ ref ++ "[" ++ show fc ++ "]" ++ " == " ++ show (toConstr val) ++ ": "

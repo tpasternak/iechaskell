@@ -33,7 +33,7 @@ import           Iec61850.Mms
 import           Iec61850.MmsInternal
 import           Iec61850.NameTree
 
-type LengthMonad = ExceptT String IO
+type IedMonad = ExceptT String IO
 
 data SIedConnection
 
@@ -126,7 +126,7 @@ foreign import ccall unsafe
 connect
   :: String -- ^ IP address
   -> Int32 -- ^ Port
-  -> LengthMonad IedConnection -- ^ IED connection handle
+  -> IedMonad IedConnection -- ^ IED connection handle
 connect host port = do
   rawCon <- liftIO $ c_IedConnectionCreate
   con    <- liftIO $ newForeignPtr c_IedConnection_destroy rawCon
@@ -143,7 +143,7 @@ connect host port = do
     peek err
 
 -- | Get list of all logical nodes from the IED
-logicalDevices :: IedConnection -> LengthMonad [String]
+logicalDevices :: IedConnection -> IedMonad [String]
 logicalDevices con = do
   x <- liftIO $ alloca $ \err -> do
     nodes <- withForeignPtr con
@@ -159,7 +159,7 @@ logicalDevices con = do
     Right r -> return r
     Left  l -> throwError l
 
-logicalNodes :: IedConnection -> String -> LengthMonad [String]
+logicalNodes :: IedConnection -> String -> IedMonad [String]
 logicalNodes con device = do
   x <- liftIO $ useAsCString (pack device) $ \dev -> alloca $ \err -> do
     nodes <- withForeignPtr
@@ -182,7 +182,7 @@ logicalNodes con device = do
 
 
 
-logicalNodeVariables :: IedConnection -> String -> LengthMonad [String]
+logicalNodeVariables :: IedConnection -> String -> IedMonad [String]
 logicalNodeVariables con lnode = do
   x <- liftIO $ useAsCString (pack lnode) $ \dev -> alloca $ \err -> do
     nodes <- withForeignPtr
@@ -276,14 +276,14 @@ mmsType con path fc = do
   fMmsSpec <- mmsSpec con path fc
   MmsType <$> withForeignPtr fMmsSpec c_MmsVariableSpecification_getType
 
-discover :: IedConnection -> IO [(String, FunctionalConstraint)]
+discover :: IedConnection -> IedMonad [(String, FunctionalConstraint)]
 discover con = do
-  ldevices <- fromRight <$> runExceptT (logicalDevices con)
+  ldevices <- logicalDevices con
   fmap msum $ forM ldevices $ \dev -> do
-    nodes <- fromRight <$> runExceptT (logicalNodes con dev)
+    nodes <- logicalNodes con dev
     fmap msum $ forM nodes $ \node -> do
       let nodeRef = dev ++ "/" ++ node
-      lnVars <- fromRight <$> runExceptT (logicalNodeVariables con nodeRef)
+      lnVars <- logicalNodeVariables con nodeRef
       let nameTree = buildNameTree lnVars
       let leaves   = leavesPaths nameTree
       return $ fmap (varNameToIdentityPair nodeRef) leaves
