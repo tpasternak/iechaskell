@@ -256,10 +256,17 @@ readVal con daReference fc = do
     case errNo of
       0 -> do
         safeMmsVal <- newForeignPtr c_MmsValue_delete mmsVal
-        x <- fromCMmsVal safeMmsVal
+        x          <- fromCMmsVal safeMmsVal
         return $ Right x
-      _ -> return $ Left $  "Error while reading field variable: '" ++ daReference ++ "["
-           ++ show fc ++  "]' Errno=" ++ show errNo
+      _ ->
+        return
+          $  Left
+          $  "Error while reading field variable: '"
+          ++ daReference
+          ++ "["
+          ++ show fc
+          ++ "]' Errno="
+          ++ show errNo
   case x of
     Right r -> return r
     Left  l -> throwError l
@@ -304,11 +311,7 @@ discover con = do
     in  (replace "$" "." varPath, fc)
 
 writeVal
-  :: IedConnection
-  -> String
-  -> FunctionalConstraint
-  -> MmsVar
-  -> IedMonad ()
+  :: IedConnection -> String -> FunctionalConstraint -> MmsVar -> IedMonad ()
 writeVal con daReference fc v = do
   x <- liftIO $ useAsCString (pack daReference) $ \p -> alloca $ \err -> do
     rawVal <- toSMmsValue v
@@ -318,8 +321,15 @@ writeVal con daReference fc v = do
       errNo <- peek err
       case errNo of
         0 -> return $ Right ()
-        _ -> return $ Left $ "Error while writing: '" ++ daReference ++ "'; ErrNo='" ++ (show errNo) ++ "'"
+        _ ->
+          return
+            $  Left
+            $  "Error while writing: '"
+            ++ daReference
+            ++ "'; ErrNo='"
+            ++ (show errNo)
+            ++ "'"
   case x of
     Right r -> return r
-    Left l -> throwError l
+    Left  l -> throwError l
 
