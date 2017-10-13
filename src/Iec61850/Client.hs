@@ -19,6 +19,7 @@ import           Control.Monad
 import           Control.Monad.Except
 import           Data.ByteString.Char8    (pack, useAsCString)
 import           Data.Int
+import           Data.List(nub)
 import           Data.List.Utils
 import           Foreign.C.String
 import           Foreign.C.Types
@@ -165,11 +166,7 @@ logicalNodes con device = do
   x <- liftIO $ useAsCString (pack device) $ \dev -> alloca $ \err -> do
     nodes <- withForeignPtr
       con
-      ( ( \err rawCon ->
-          c_IedConnection_getLogicalDeviceDirectory rawCon err dev
-        )
-        err
-      )
+      (\rawCon -> c_IedConnection_getLogicalDeviceDirectory rawCon err dev)
     nodesSafe <- newForeignPtr c_LinkedList_destroy nodes
     errNo     <- peek err
     case errNo of
@@ -301,7 +298,7 @@ discover con = do
     fmap msum $ forM nodes $ \node -> do
       let nodeRef = dev ++ "/" ++ node
       lnVars <- logicalNodeVariables con nodeRef
-      let nameTree = buildNameTree lnVars
+      let nameTree = buildNameTree $ nub lnVars
       let leaves   = leavesPaths nameTree
       return $ fmap (varNameToIdentityPair nodeRef) leaves
  where
