@@ -9,6 +9,7 @@ import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.ForeignPtr
 import           Foreign.Marshal.Alloc
+import           Foreign.Marshal.Utils
 import           Foreign.Ptr
 import           Foreign.Storable
 import           Iec61850.BitString
@@ -63,6 +64,12 @@ foreign import ccall unsafe "iec61850_client.h MmsValue_newFloat"
 
 foreign import ccall unsafe "iec61850_client.h MmsValue_newUnsignedFromUint32"
                c_MmsValue_newUnsignedFromUint32 :: CUint32 -> IO (Ptr SMmsValue)
+
+foreign import ccall unsafe "iec61850_client.h MmsValue_newMmsString"
+               c_MmsValue_newMmsString :: CString -> IO (Ptr SMmsValue)
+
+foreign import ccall unsafe "iec61850_client.h MmsValue_newBoolean"
+               c_MmsValue_newBoolean :: CBool -> IO (Ptr SMmsValue)
 
 foreign import ccall unsafe "iec61850_client.h &MmsValue_delete"
                c_MmsValue_delete :: FunPtr (Ptr SMmsValue -> IO ())
@@ -119,6 +126,8 @@ toSMmsValueUnsafe (MmsInteger i) =
   c_MmsValue_newIntegerFromInt32 (fromIntegral i)
 toSMmsValueUnsafe (MmsFloat i) = c_MmsValue_newFloat (realToFrac i)
 toSMmsValueUnsafe (MmsUnsigned i) = c_MmsValue_newUnsignedFromUint32 i
+toSMmsValueUnsafe (MmsString name) = withCString name (\cname -> c_MmsValue_newMmsString cname)
+toSMmsValueUnsafe (MmsBoolean b) =  c_MmsValue_newBoolean (fromBool b)
 toSMmsValueUnsafe _            = undefined
 
 
