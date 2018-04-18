@@ -68,6 +68,10 @@ foreign import ccall unsafe "iec61850_client.h MmsValue_newUnsignedFromUint32"
 foreign import ccall unsafe "iec61850_client.h MmsValue_newMmsString"
                c_MmsValue_newMmsString :: CString -> IO (Ptr SMmsValue)
 
+foreign import ccall unsafe "iec61850_client.h MmsValue_newVisibleString"
+               c_MmsValue_newVisibleString :: CString -> IO (Ptr SMmsValue)
+
+
 foreign import ccall unsafe "iec61850_client.h MmsValue_newBoolean"
                c_MmsValue_newBoolean :: CBool -> IO (Ptr SMmsValue)
 
@@ -127,6 +131,7 @@ toSMmsValueUnsafe (MmsInteger i) =
 toSMmsValueUnsafe (MmsFloat i) = c_MmsValue_newFloat (realToFrac i)
 toSMmsValueUnsafe (MmsUnsigned i) = c_MmsValue_newUnsignedFromUint32 i
 toSMmsValueUnsafe (MmsString name) = withCString name (\cname -> c_MmsValue_newMmsString cname)
+toSMmsValueUnsafe (MmsVisibleString name) = withCString name (\cname -> c_MmsValue_newVisibleString cname)
 toSMmsValueUnsafe (MmsBoolean b) =  c_MmsValue_newBoolean (fromBool b)
 toSMmsValueUnsafe _            = undefined
 
